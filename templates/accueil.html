@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Accueil - Face Attendance{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/accueil.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Video Background -->
+<div class="bg-video-container" aria-hidden="true">
+    <video autoplay loop muted playsinline class="bg-video" id="bgVideo">
+        <source src="/media/videos/accueil.mp4" type="video/mp4">
+        <source src="{% static 'aceuille.mp4' %}" type="video/mp4">
+        <!-- Optional fallback image if video fails to load can be added here -->
+    </video>
+    <div class="bg-overlay"></div>
+</div>
+
+<!-- HERO SECTION -->
+<main id="heroSection" class="fade-section active" aria-hidden="false">
+    <div class="hero-content">
+        <h1 class="hero-title">
+            Face Attendance
+        </h1>
+        <p class="hero-subtitle">
+            Système intelligent de gestion de présence par reconnaissance faciale.
+        </p>
+        <button id="btnShowLogin" class="btn-main" type="button" style="width: auto; padding: 1rem 3rem;">
+            Commencer
+        </button>
+    </div>
+</main>
+
+<!-- LOGIN SECTION -->
+<section id="loginSection" class="fade-section" aria-hidden="true">
+    <div class="glass-panel">
+        <button id="btnBackToHero" type="button" class="btn-back" aria-label="Retour à l'accueil">
+            <i class="fa-solid fa-arrow-left"></i> Retour
+        </button>
+
+        <h2 class="panel-title">Connexion</h2>
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-danger" role="alert"
+            style="background: rgba(220,53,69,0.2); border: 1px solid #dc3545; color: #ff6b6b; border-radius: 12px; font-size: 0.9rem; margin-bottom: 20px; padding: 1rem;">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="post" action="{% url 'accueil' %}">
+            {% csrf_token %}
+
+            <!-- Role Selection -->
+            <div class="form-group">
+                <label class="form-label">Je suis :</label>
+                <div class="role-list" id="roleList">
+                    <label class="role-option">
+                        <input type="radio" name="role" value="admin" class="role-radio" checked>
+                        <span class="role-label-text">Administrateur</span>
+                    </label>
+                    <label class="role-option">
+                        <input type="radio" name="role" value="professor" class="role-radio">
+                        <span class="role-label-text">Professeur</span>
+                    </label>
+                    <label class="role-option">
+                        <input type="radio" name="role" value="student" class="role-radio">
+                        <span class="role-label-text">Étudiant</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Email Input -->
+            <div class="form-group">
+                <label for="email" class="form-label">Gmail</label>
+                <input type="email" id="email" name="email" class="form-control-custom" placeholder="exemple@gmail.com"
+                    required autocomplete="email">
+            </div>
+
+            <!-- Code Input -->
+            <div class="form-group">
+                <label for="code" class="form-label">Code d'accès</label>
+                <input type="password" id="code" name="code" class="form-control-custom" placeholder="••••••••" required
+                    autocomplete="current-password">
+            </div>
+
+            <button type="submit" class="btn-main">
+                Se connecter
+            </button>
+        </form>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/accueil.js' %}"></script>
+
+{% endblock %}

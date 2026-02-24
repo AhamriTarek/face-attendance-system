@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="glass-card">
+            <h2 class="mb-0"><i class="fa-solid fa-user-shield me-2"></i>Tableau de Bord Admin</h2>
+            <p class="text-secondary">Gérez le système de présence faciale</p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <!-- Stats -->
+    <div class="col-md-4">
+        <div class="glass-card text-center">
+            <h1 class="display-4 fw-bold text-primary">{{ professor_count }}</h1>
+            <p class="text-white">Professeurs</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="glass-card text-center">
+            <h1 class="display-4 fw-bold text-success">{{ student_count }}</h1>
+            <p class="text-white">Étudiants</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="glass-card text-center">
+            <h1 class="display-4 fw-bold text-info">{{ course_count }}</h1>
+            <p class="text-white">Matières</p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Actions -->
+    <div class="col-md-4">
+        <div class="glass-card h-100">
+            <h4><i class="fa-solid fa-chalkboard-user me-2"></i>Professeurs</h4>
+            <p class="text-secondary small">Gérer les professeurs et leurs accès.</p>
+            <a href="{% url 'create_professor' %}" class="btn btn-premium w-100">Créer un Professeur</a>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="glass-card h-100">
+            <h4><i class="fa-solid fa-graduation-cap me-2"></i>Étudiants</h4>
+            <p class="text-secondary small">Ajouter des étudiants avec reconnaissance faciale.</p>
+            <a href="{% url 'add_student' %}" class="btn btn-premium w-100">Ajouter Étudiant (Face ID)</a>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="glass-card h-100">
+            <h4><i class="fa-solid fa-book-open me-2"></i>Matières</h4>
+            <p class="text-secondary small">Affecter des matières aux professeurs.</p>
+            <a href="{% url 'create_course' %}" class="btn btn-premium w-100">Créer une Matière</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

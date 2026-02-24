@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="glass-card">
+            <h3 class="mb-4"><i class="fa-solid fa-book me-2"></i>Créer une Matière</h3>
+
+            <form method="POST">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label>Nom de la Matière</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+
+                <div class="mb-3">
+                    <label>Filière</label>
+                    <input type="text" name="filiere" class="form-control" required>
+                </div>
+
+                <div class="mb-4">
+                    <label>Attribuer au Professeur</label>
+                    <select name="professor_id" class="form-control text-dark" style="background-color: white;"
+                        required>
+                        <option value="" disabled selected>-- Sélectionner un Professeur --</option>
+                        {% for prof in professors %}
+                        <option value="{{ prof.id }}">{{ prof.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-premium w-100 mb-2">Créer la Matière</button>
+                <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-light w-100">Retour</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Create New Session for {{ course.name }}</h2>
+<form method="post" class="mt-4" style="max-width: 500px;">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label">Date</label>
+        <input type="date" name="date" class="form-control" required value="{% now 'Y-m-d' %}">
+    </div>
+    <div class="row">
+        <div class="col">
+            <label class="form-label">Start Time</label>
+            <input type="time" name="start" class="form-control" required value="09:00">
+        </div>
+        <div class="col">
+            <label class="form-label">End Time</label>
+            <input type="time" name="end" class="form-control" required value="11:00">
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3">Create Filter</button>
+</form>
+{% endblock %}

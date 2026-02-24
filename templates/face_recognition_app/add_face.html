@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Add Student Face</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Register a face for an existing student to enable facial recognition.</p>
+
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label">Select Student</label>
+                        {{ form.student }}
+                        <div class="form-text">Choose from the list...</div>
+                    </div>
+
+                    <div class="text-center my-2 text-muted">- OR -</div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Student Code (Massar)</label>
+                        {{ form.code_masar }}
+                        <div class="form-text">Enter code directly if student is not found in list.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Detection Model</label>
+                        {{ form.model_used }}
+                        <div class="form-text">Use 'hog' for speed (CPU), 'cnn' for accuracy (GPU recommended).</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Face Image</label>
+                        <input type="file" name="image" class="form-control" accept="image/*" required>
+                        <div class="form-text">Upload a clear photo with only one face.</div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i> Save & Register
+                        </button>
+                        <a href="{% url 'professor_dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

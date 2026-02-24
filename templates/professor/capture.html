@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span>Live Attendance: {{ session.course.name }} ({{ session.session_date }})</span>
+                <span class="badge bg-danger" id="statusBadge">Live</span>
+            </div>
+            <div class="card-body text-center bg-black p-0 position-relative">
+                <video id="video" width="100%" height="auto" autoplay playsinline
+                    style="transform: scaleX(-1);"></video>
+                <canvas id="canvas" style="display:none;"></canvas>
+            </div>
+            <div class="card-footer">
+                <button id="btnToggle" class="btn btn-warning w-100">Pause Detection</button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card" style="height: 100%;">
+            <div class="card-header">Recent Activity</div>
+            <div class="card-body overflow-auto" id="logBox" style="max-height: 400px;">
+                <p class="text-muted small">Waiting for faces...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const logBox = document.getElementById('logBox');
+    const btnToggle = document.getElementById('btnToggle');
+    let isDetecting = true;
+
+    // Start Webcam
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => { video.srcObject = stream; })
+        .catch(err => { alert("Camera error: " + err); });
+
+    function log(msg, type = 'info') {
+        const div = document.createElement('div');
+        div.className = `alert alert-${type} py-1 px-2 mb-1 small`;
+        div.innerText = new Date().toLocaleTimeString() + ': ' + msg;
+        logBox.prepend(div);
+    }
+
+    async function sendFrame() {
+        if (!isDetecting) return;
+
+        const ctx = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(async (blob) => {
+            const fd = new FormData();
+            fd.append('image', blob, 'frame.jpg');
+            fd.append('session_id', '{{ session.id }}');
+
+            try {
+                const res = await fetch("{% url 'recognize_api' %}", {
+                    method: 'POST',
+                    body: fd,
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+                });
+                const data = await res.json();
+
+                if (data.match) {
+                    log(data.status, 'success');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }, 'image/jpeg', 0.8);
+    }
+
+    // Capture every 2 seconds
+    setInterval(sendFrame, 2000);
+
+    btnToggle.addEventListener('click', () => {
+        isDetecting = !isDetecting;
+        btnToggle.innerText = isDetecting ? "Pause Detection" : "Resume Detection";
+        btnToggle.className = isDetecting ? "btn btn-warning w-100" : "btn btn-success w-100";
+    });
+</script>
+{% endblock %}

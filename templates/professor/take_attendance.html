@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="glass-card d-flex justify-content-between align-items-center">
+            <div>
+                <h3 class="mb-0">{{ course.name }}</h3>
+                <p class="text-secondary mb-0">{{ course.filiere }} | {{ professor_id }}</p>
+            </div>
+            <div class="h4" id="clock">00:00:00</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Camera Section -->
+    <div class="col-md-8">
+        <div class="glass-card p-0 overflow-hidden text-center position-relative"
+            style="min-height: 480px; background: black;">
+            <!-- Placeholder before start -->
+            <div id="cameraPlaceholder"
+                class="d-flex justify-content-center align-items-center h-100 w-100 position-absolute"
+                style="top:0; left:0; z-index: 10;">
+                <div class="text-muted">
+                    <i class="fa-solid fa-video-slash fa-3x mb-3"></i>
+                    <p>La caméra est arrêtée</p>
+                </div>
+            </div>
+
+            <!-- Video Feed -->
+            <img id="videoFeed" src="" style="width: 100%; height: auto; display: none;" />
+        </div>
+
+        <div class="glass-card mt-3 d-flex gap-3 justify-content-center">
+            <button onclick="startCamera()" class="btn btn-success px-4">
+                <i class="fa-solid fa-play me-2"></i>Démarrer la Caméra
+            </button>
+            <button onclick="stopCamera()" class="btn btn-danger px-4">
+                <i class="fa-solid fa-stop me-2"></i>Arrêter la Caméra
+            </button>
+        </div>
+    </div>
+
+    <!-- Attendance List Section -->
+    <div class="col-md-4">
+        <div class="glass-card h-100">
+            <h4 class="mb-3">Activité Récente</h4>
+            <div class="overflow-auto bg-dark rounded p-2"
+                style="height: 300px; border: 1px solid var(--glass-border);">
+                <ul id="presentList" class="list-group list-group-flush bg-transparent">
+                    <!-- JS will populate this -->
+                </ul>
+            </div>
+
+            <hr class="border-secondary my-3">
+
+            <form action="{% url 'save_session' %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="course_id" value="{{ course.id }}">
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="mb-2">Heure Début</label>
+                        <input type="time" name="start_time" class="form-control text-light bg-transparent"
+                            style="border: 1px solid #ffffff33;" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="mb-2">Heure Fin</label>
+                        <input type="time" name="end_time" class="form-control text-light bg-transparent"
+                            style="border: 1px solid #ffffff33;" required>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mb-3">
+                    <small>Saisissez les horaires officiels de la séance. La durée sera calculée
+                        automatiquement.</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-3 fw-bold">
+                    <i class="fa-solid fa-floppy-disk me-2"></i>Sauvegarder la Séance
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Update Clock
+    setInterval(() => {
+        const now = new Date();
+        document.getElementById('clock').innerText = now.toLocaleTimeString();
+    }, 1000);
+
+    let listInterval = null;
+
+    function startCamera() {
+        console.log("Démarrage caméra...");
+        fetch("{% url 'start_camera' %}")
+            .then(response => response.json())
+            .then(data => {
+                const img = document.getElementById('videoFeed');
+                const placeholder = document.getElementById('cameraPlaceholder');
+
+                // Set src to video_feed URL to start streaming
+                img.src = "{% url 'video_feed' %}";
+                img.style.display = 'block';
+                placeholder.style.display = 'none';
+
+                // Start polling list
+                if (!listInterval) {
+                    listInterval = setInterval(fetchPresentList, 2000);
+                }
+            });
+    }
+
+    function stopCamera() {
+        console.log("Arrêt caméra...");
+        fetch("{% url 'stop_camera' %}")
+            .then(response => response.json())
+            .then(data => {
+                const img = document.getElementById('videoFeed');
+                const placeholder = document.getElementById('cameraPlaceholder');
+
+                img.src = ""; // Stop loading
+                img.style.display = 'none';
+                placeholder.style.display = 'flex';
+
+                // Stop polling
+                if (listInterval) {
+                    clearInterval(listInterval);
+                    listInterval = null;
+                }
+            });
+    }
+
+    function fetchPresentList() {
+        fetch("{% url 'get_present_students' %}")
+            .then(response => response.json())
+            .then(data => {
+                const list = document.getElementById('presentList');
+                list.innerHTML = ""; // Clear current list (or append smarter)
+
+                data.students.forEach(student => {
+                    const li = document.createElement('li');
+                    li.className = "list-group-item bg-transparent text-white border-bottom border-secondary d-flex justify-content-between";
+                    li.innerHTML = `<span><i class='fa-solid fa-check text-success me-2'></i>${student.full_name}</span> <small class='text-muted'>${student.time}</small>`;
+                    list.appendChild(li);
+                });
+            });
+    }
+</script>
+{% endblock %}

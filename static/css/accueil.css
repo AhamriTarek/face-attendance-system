@@ -1,0 +1,330 @@
+/* CSS for Accueil Redesign */
+:root {
+    --vh: 1vh;
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --secondary: #a855f7;
+    --glass-bg: rgba(255, 255, 255, 0.08);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --text-main: #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.7);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: transparent !important;
+    background-color: transparent !important;
+    color: var(--text-main);
+}
+
+/* Background Video */
+.bg-video-container {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: calc(var(--vh) * 100);
+    z-index: -1;
+    /* Place behind content but in front of default body background */
+    overflow: hidden;
+}
+
+.bg-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.05);
+    /* Avoid black edges during resize */
+}
+
+.bg-overlay {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.15) 0%, rgba(0, 0, 0, 0.7) 100%),
+        rgba(0, 0, 0, 0.4);
+    z-index: 1;
+}
+
+/* Transitions */
+.fade-section {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(20px);
+    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+        filter 0.6s ease;
+    filter: blur(10px);
+}
+
+.fade-section.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+    filter: blur(0);
+}
+
+/* Hero Section */
+.hero-content {
+    text-align: center;
+    max-width: 800px;
+    z-index: 10;
+}
+
+/* Hide base template elements for true full-screen */
+.navbar,
+.container {
+    display: none !important;
+}
+
+/* Re-show the container inside which our blocks are injected but without padding/limit */
+body>.container {
+    display: block !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.hero-title {
+    font-size: clamp(2.5rem, 8vw, 4.5rem);
+    font-weight: 800;
+    margin-bottom: 1rem;
+    line-height: 1.1;
+    background: linear-gradient(to bottom right, #fff 50%, rgba(255, 255, 255, 0.7));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.hero-subtitle {
+    font-size: clamp(1.1rem, 2vw, 1.4rem);
+    color: var(--text-muted);
+    margin-bottom: 3rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Glass Panel */
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: 1px solid var(--glass-border);
+    border-radius: 1.5rem;
+    padding: 1.5rem 2rem;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
+    position: relative;
+    z-index: 100;
+    margin: auto;
+}
+
+.panel-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+    text-align: center;
+}
+
+/* Forms */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-muted);
+}
+
+.form-control-custom {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: white;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control-custom:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+/* Role Selector */
+.role-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.role-option {
+    display: flex;
+    align-items: center;
+    padding: 0.85rem 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.role-radio {
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--glass-border);
+    border-radius: 50%;
+    margin-right: 0.75rem;
+    position: relative;
+    cursor: pointer;
+}
+
+.role-radio:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 0.5rem;
+    height: 0.5rem;
+    background: var(--primary);
+    border-radius: 50%;
+}
+
+.role-label-text {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.role-option:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: scale(1.02);
+}
+
+.role-option.selected {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: var(--primary);
+}
+
+.role-radio {
+    appearance: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--glass-border);
+    border-radius: 50%;
+    margin-right: 1rem;
+    position: relative;
+    cursor: pointer;
+}
+
+.role-radio:checked {
+    border-color: var(--primary);
+}
+
+.role-radio:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 0.625rem;
+    height: 0.625rem;
+    background: var(--primary);
+    border-radius: 50%;
+}
+
+.role-label-text {
+    font-weight: 600;
+}
+
+/* Buttons */
+.btn-main {
+    width: 100%;
+    padding: 0.85rem;
+    border-radius: 0.85rem;
+    border: none;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+}
+
+
+.btn-main:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.4);
+    filter: brightness(1.1);
+}
+
+.btn-main:active {
+    transform: translateY(0);
+}
+
+.btn-back {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    transition: color 0.2s;
+}
+
+.btn-back:hover {
+    color: white;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+
+    .fade-section,
+    .role-option,
+    .btn-main {
+        transition: none !important;
+        transform: none !important;
+        filter: none !important;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .glass-panel {
+        padding: 2rem 1.5rem;
+        border-radius: 1.5rem;
+    }
+
+    .hero-title {
+        font-size: 3rem;
+    }
+}

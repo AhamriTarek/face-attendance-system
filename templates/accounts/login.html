@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card p-4">
+            <h3 class="text-center mb-4">Login</h3>
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" name="email" class="form-control" required placeholder="Enter your email">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password" class="form-control" required
+                        placeholder="Enter your password">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">I am a:</label>
+                    <div class="d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="role" value="professor" id="roleProf"
+                                checked>
+                            <label class="form-check-label" for="roleProf">Professor</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="role" value="student" id="roleStu">
+                            <label class="form-check-label" for="roleStu">Student</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Sign In</button>
+            </form>
+        </div>
+        <div class="text-center mt-3 text-muted">
+            <small>Demo Accounts:<br>Professor: teacher@test.com / 123456<br>Student: tarek@test.com /
+                student123</small>
+        </div>
+    </div>
+</div>
+{% endblock %}

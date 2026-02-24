@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="col-md-5">
+        <div class="glass-card text-center">
+            <h2 class="mb-4">Bienvenue</h2>
+            <p class="text-muted mb-4">Sélectionnez votre rôle pour continuer</p>
+
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <select name="role" id="roleSelect" class="form-control text-center text-dark"
+                        style="background-color: white;" onchange="toggleFields()">
+                        <option value="" disabled selected>-- Choisir un Rôle --</option>
+                        <option value="admin">Admin</option>
+                        <option value="professor">Professeur</option>
+                        <option value="student">Étudiant</option>
+                    </select>
+                </div>
+
+                <div id="loginFields" style="display:none;">
+                    <div class="mb-3">
+                        <input type="text" name="email" class="form-control" placeholder="Email / Identifiant" required>
+                    </div>
+                    <div class="mb-3">
+                        <input type="password" name="password" class="form-control" placeholder="Mot de passe" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-premium w-100">Se connecter</button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleFields() {
+        const role = document.getElementById('roleSelect').value;
+        const fields = document.getElementById('loginFields');
+        if (role) {
+            fields.style.display = 'block';
+        } else {
+            fields.style.display = 'none';
+        }
+    }
+</script>
+{% endblock %}

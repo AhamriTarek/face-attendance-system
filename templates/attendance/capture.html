@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span>Live Attendance: {{ session.course.name }}</span>
+                <span class="badge bg-success" id="statusBadge">Active</span>
+            </div>
+            <div class="card-body text-center bg-black p-0">
+                <!-- Server MJPEG Stream -->
+                <img id="liveStream" src="{% url 'video_feed' session.id %}" width="100%" style="min-height: 480px;">
+            </div>
+            <div class="card-footer">
+                <button id="btnToggle" class="btn btn-warning w-100">Pause Detection</button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card" style="height: 100%;">
+            <div class="card-header">Recent Activity (<span id="count">0</span>)</div>
+            <div class="card-body overflow-auto" id="logBox" style="max-height: 500px; background: #f8f9fa;">
+                <!-- Logs injected here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const btnToggle = document.getElementById('btnToggle');
+    const logBox = document.getElementById('logBox');
+    const countSpan = document.getElementById('count');
+    const statusBadge = document.getElementById('statusBadge');
+    let isDetecting = true;
+    let sessionId = "{{ session.id }}";
+
+    // Toggle Logic
+    btnToggle.addEventListener('click', async () => {
+        isDetecting = !isDetecting;
+
+        // Optimize: Update UI immediately
+        updateUI(isDetecting);
+
+        try {
+            await fetch(`/attendance/session/${sessionId}/toggle/`, {
+                method: 'POST',
+                body: JSON.stringify({ active: isDetecting }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            });
+        } catch (e) {
+            console.error(e);
+            // Revert on error
+            isDetecting = !isDetecting;
+            updateUI(isDetecting);
+        }
+    });
+
+    function updateUI(active) {
+        if (active) {
+            btnToggle.innerText = "Pause Detection";
+            btnToggle.className = "btn btn-warning w-100";
+            statusBadge.className = "badge bg-success";
+            statusBadge.innerText = "Active";
+        } else {
+            btnToggle.innerText = "Resume Detection";
+            btnToggle.className = "btn btn-primary w-100";
+            statusBadge.className = "badge bg-secondary";
+            statusBadge.innerText = "Paused";
+        }
+    }
+
+    // Polling Activity
+    async function fetchActivity() {
+        try {
+            const res = await fetch(`/attendance/session/${sessionId}/activity/`);
+            const data = await res.json();
+            renderLogs(data.activity);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function renderLogs(logs) {
+        logBox.innerHTML = "";
+        countSpan.innerText = logs.length;
+
+        logs.forEach(log => {
+            const div = document.createElement('div');
+            let color = "alert-info";
+            if (log.status.includes("Out")) color = "alert-secondary";
+            if (log.status.includes("In")) color = "alert-success";
+
+            div.className = `alert ${color} py-2 px-2 mb-2 small shadow-sm`;
+            div.innerHTML = `<strong>${log.name}</strong> <span class="float-end text-muted">${log.time}</span><br>${log.status}`;
+            logBox.appendChild(div);
+        });
+    }
+
+    setInterval(fetchActivity, 1000);
+
+</script>
+{% endblock %}

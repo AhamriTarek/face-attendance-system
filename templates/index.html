@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Face Recognition Web</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Face Recognition</h1>
+      <p class="muted">
+        Live camera recognition (rectangle + name) on the left, and add new people on the right.
+      </p>
+    </header>
+
+    <div class="grid">
+      <!-- LEFT: LIVE CAMERA -->
+      <section class="card">
+        <div class="card-title">
+          <h2>Live Camera Recognition</h2>
+          <span class="badge">Python + OpenCV</span>
+        </div>
+        <p class="muted small">
+          The bounding box and name are drawn by Python (OpenCV) and streamed to the browser.
+        </p>
+
+        <div class="live-wrap">
+          <img class="live" src="/video_feed" alt="Live Face Recognition Stream">
+        </div>
+
+        <!-- NEW: Seen students buttons -->
+        <div class="row actions">
+          <button id="btnSeen" class="primary">Show Seen Students</button>
+          <button id="btnResetSeen">Reset Seen</button>
+        </div>
+
+        <div class="status" id="seenStatus">Seen: 0</div>
+
+        <h3 class="sub">Students seen (at least once)</h3>
+        <ul id="seenList" class="people"></ul>
+
+        <div class="hint">
+          <strong>Tip:</strong> If you add a person on the right, refresh the page to reload faces.
+        </div>
+      </section>
+
+      <!-- RIGHT: ADD PERSON -->
+      <section class="card">
+        <div class="card-title">
+          <h2>Add New Person</h2>
+          <span class="badge">Upload + Save</span>
+        </div>
+
+        <p class="muted small">Enter a name + upload a clear face photo (one face).</p>
+
+        <div class="row">
+          <label class="label">Name</label>
+          <input type="text" id="personName" placeholder="e.g., tarek, cr7, messi">
+        </div>
+
+        <div class="row">
+          <label class="label">Face photo</label>
+          <input type="file" id="personImage" accept="image/*">
+        </div>
+
+        <div class="row actions">
+          <button id="btnAdd" class="primary">Add Person</button>
+          <button id="btnRefresh" title="Reload list">Refresh list</button>
+        </div>
+
+        <div class="status" id="status">Status: ready</div>
+
+        <h3 class="sub">Known people</h3>
+        <ul id="peopleList" class="people"></ul>
+      </section>
+    </div>
+  </div>
+
+  <!-- JSON data for VSCode friendly (no red underline) -->
+  <script id="peopleData" type="application/json">{{ people|tojson }}</script>
+
+  <script>
+    // Known people list
+    const initialPeople = JSON.parse(document.getElementById("peopleData").textContent || "[]");
+    const peopleUl = document.getElementById("peopleList");
+    (initialPeople || []).forEach(p=>{
+      const li = document.createElement("li");
+      li.textContent = p;
+      peopleUl.appendChild(li);
+    });
+
+    // Refresh list
+    document.getElementById("btnRefresh").addEventListener("click", ()=> location.reload());
+
+    // Add person
+    document.getElementById("btnAdd").addEventListener("click", async ()=>{
+      const name = document.getElementById("personName").value.trim();
+      const file = document.getElementById("personImage").files[0];
+      const statusEl = document.getElementById("status");
+
+      if(!name){ alert("Enter a name"); return; }
+      if(!file){ alert("Choose an image"); return; }
+
+      statusEl.textContent = "Status: adding person...";
+
+      const fd = new FormData();
+      fd.append("name", name);
+      fd.append("image", file);
+
+      try{
+        const res = await fetch("/add_person", { method:"POST", body: fd });
+        const data = await res.json();
+
+        if(!data.ok){
+          statusEl.textContent = "Status: error";
+          alert(data.error || "Error");
+          return;
+        }
+
+        alert(data.message || "Added!");
+        statusEl.textContent = "Status: done ✅ (refreshing...)";
+        setTimeout(()=> location.reload(), 700);
+
+      }catch(e){
+        statusEl.textContent = "Status: error";
+        alert("Network error: " + e.message);
+      }
+    });
+
+    // Seen list functions
+    async function loadSeen(){
+      const res = await fetch("/seen");
+      const data = await res.json();
+
+      const ul = document.getElementById("seenList");
+      ul.innerHTML = "";
+      (data.seen || []).forEach(n=>{
+        const li = document.createElement("li");
+        li.textContent = n;
+        ul.appendChild(li);
+      });
+
+      document.getElementById("seenStatus").textContent = "Seen: " + (data.seen?.length || 0);
+    }
+
+    document.getElementById("btnSeen").addEventListener("click", loadSeen);
+
+    document.getElementById("btnResetSeen").addEventListener("click", async ()=>{
+      await fetch("/reset_seen", { method:"POST" });
+      await loadSeen();
+    });
+
+    // OPTIONAL: auto update every 2 seconds
+    // setInterval(loadSeen, 2000);
+  </script>
+</body>
+</html>
