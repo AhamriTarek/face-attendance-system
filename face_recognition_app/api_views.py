@@ -2,16 +2,28 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status
-import face_recognition
-import numpy as np
+from django.conf import settings
 from face_recognition_app.models import StudentFace
 from face_recognition_app.utils import deserialize_embedding
 from accounts.models import Student
+
+# NOTE: face_recognition / numpy are imported lazily inside post() so this
+# module imports cleanly in cloud mode. The endpoint is gated behind
+# settings.FACE_RECOGNITION_ENABLED.
 
 class RecognizeFaceAPI(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request, *args, **kwargs):
+        if not settings.FACE_RECOGNITION_ENABLED:
+            return Response(
+                {'match': False, 'message': 'Live face recognition is available in local mode only.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        import face_recognition
+        import numpy as np
+
         if 'image' not in request.files:
             return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
 

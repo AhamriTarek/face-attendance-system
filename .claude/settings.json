@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Skill(*)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "MultiEdit(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "TodoRead(*)",
+      "TodoWrite(*)",
+      "PowerShell(*)",
+      "PowerShell(py *)",
+      "PowerShell(python *)",
+      "PowerShell(npm *)",
+      "PowerShell(node *)",
+      "PowerShell(cd *)",
+      "PowerShell(Start-Process *)"
+    ],
+    "deny": []
+  }
+}

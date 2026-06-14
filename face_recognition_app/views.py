@@ -1,16 +1,24 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.conf import settings
 from accounts.decorators import professor_required
 from accounts.models import Student
 from .forms import StudentFaceForm
 from .models import StudentFace
 from .utils import get_face_embedding, serialize_embedding
-from attendance.services.recognizer import FaceRecognizerService
 import os
+
+# NOTE: FaceRecognizerService (webcam + heavy libs) is imported lazily inside
+# the POST branch, which is gated behind settings.FACE_RECOGNITION_ENABLED.
+# The GET form still renders normally in cloud mode.
 
 @professor_required
 def add_face(request):
     if request.method == 'POST':
+        if not settings.FACE_RECOGNITION_ENABLED:
+            messages.error(request, "Face registration is available in local mode only.")
+            return render(request, 'face_recognition_app/add_face.html', {'form': StudentFaceForm()})
+        from attendance.services.recognizer import FaceRecognizerService
         form = StudentFaceForm(request.POST, request.FILES)
         if form.is_valid():
             try:

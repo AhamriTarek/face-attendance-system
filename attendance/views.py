@@ -1,25 +1,34 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import StreamingHttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
+from django.conf import settings
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from accounts.decorators import login_required_custom
 
 from .models import AttendanceSession, AttendanceRecord
 from accounts.models import Student, Professor
 from courses.models import Course
-from .utils import FaceRecognizer
 
-import cv2
-import numpy as np
 import json
 import threading
+
+# NOTE: FaceRecognizer (cv2 / face_recognition / numpy) is imported lazily
+# inside VideoCamera so this module loads on a server without those libs.
+# Live-capture views are gated behind settings.FACE_RECOGNITION_ENABLED.
+
+
+def _face_disabled_response(request):
+    """Friendly notice shown when live face capture is off (cloud mode)."""
+    return render(request, 'face_disabled.html', status=200)
 
 # Global storage for active sessions (In production, use Redis/Cache)
 active_sessions = {}
 
 class VideoCamera(object):
-    def __init__(self, professor_id):
+    def __init__(self, professor_id, course_id=None):
+        import cv2
         self.video = cv2.VideoCapture(0) # Open default camera
         self.professor_id = professor_id
         
@@ -27,26 +36,42 @@ class VideoCamera(object):
         self.known_face_encodings = []
         self.known_face_names = [] # Store IDs actually
         
+        # 1. Filter students by course if provided
+        print(f"[DEBUG] Initializing VideoCamera for prof {professor_id}, course {course_id}")
         students = Student.objects.all()
+        if course_id:
+            try:
+                course = Course.objects.get(id=course_id)
+                students = students.filter(filiere=course.filiere)
+                print(f"[DEBUG] Filtered students by filiere '{course.filiere}'. Found {students.count()} students.")
+            except Course.DoesNotExist:
+                print(f"[DEBUG] Course {course_id} not found, loading all students.")
+                
+        loaded_count = 0
         for student in students:
             if student.face_encoding:
                 try:
                     encoding = json.loads(student.face_encoding)
                     self.known_face_encodings.append(encoding)
                     self.known_face_names.append(student.id)
-                except:
-                    pass
+                    loaded_count += 1
+                except Exception as e:
+                    print(f"[DEBUG] Error decoding face for {student.nom}: {e}")
+        print(f"[DEBUG] Successfully loaded {loaded_count} face encodings out of {students.count()} registered students in this context.")
 
     def __del__(self):
         self.video.release()
 
     def get_frame(self):
+        import cv2
+        from .utils import FaceRecognizer
         success, image = self.video.read()
         if not success:
             return None
-        
+
         # Face Recognition
-        face_locations, face_names = FaceRecognizer.recognize_faces(image, self.known_face_encodings, self.known_face_names)
+        # Using 0.55 tolerance for stricter recognition to prevent false positives.
+        face_locations, face_names = FaceRecognizer.recognize_faces(image, self.known_face_encodings, self.known_face_names, tolerance=0.55)
 
         # Update global state
         if self.professor_id in active_sessions and active_sessions[self.professor_id]['camera_active']:
@@ -56,10 +81,11 @@ class VideoCamera(object):
 
         # Draw rectangles and names
         for (top, right, bottom, left), name in zip(face_locations, face_names):
-            top *= 4
-            right *= 4
-            bottom *= 4
-            left *= 4
+            # Scale back up by 2 (matching the 0.5x downscale in FaceRecognizer)
+            top *= 2
+            right *= 2
+            bottom *= 2
+            left *= 2
 
             cv2.rectangle(image, (left, top), (right, bottom), (0, 0, 255), 2)
 
@@ -67,7 +93,7 @@ class VideoCamera(object):
             if name != "Unknown":
                 try:
                      s = Student.objects.get(id=name)
-                     display_name = s.full_name
+                     display_name = f"{s.nom} {s.prenom}"
                 except:
                     pass
             
@@ -87,50 +113,197 @@ def gen(camera):
         else:
             break
 
+@login_required_custom
 def professor_dashboard(request):
     professor_id = request.session.get('professor_id')
-    if not professor_id:
-        return redirect('login') 
         
     professor = Professor.objects.get(id=professor_id)
-    courses = Course.objects.filter(professor=professor)
     
-    return render(request, 'professor/dashboard.html', {'professor': professor, 'courses': courses})
-
-def take_attendance(request, course_id):
-    professor_id = request.session.get('professor_id')
-    if not professor_id:
-        return redirect('login')
+    # Get or create a Course object for this professor (keep backward compatibility)
+    from courses.models import Course
+    Course.objects.get_or_create(
+        professor=professor,
+        defaults={
+            'name': professor.matiere,
+            'filiere': professor.filiere,
+        }
+    )
+    
+    courses_raw = Course.objects.filter(professor=professor)
+    courses = []
+    
+    from datetime import date
+    today = date.today()
+    
+    for course in courses_raw:
+        prof = course.professor
         
+        has_planning = bool(
+            prof.nb_semaines and
+            prof.date_debut and
+            prof.seances_semaine
+        )
+        
+        course_data = {
+            'id':           course.id,
+            'name':         course.name,
+            'filiere':      course.filiere,
+            'has_planning': has_planning,
+            'weeks':        [],
+        }
+        
+        if has_planning:
+            nb_semaines     = int(prof.nb_semaines)
+            seances_semaine = int(prof.seances_semaine)
+            date_debut      = prof.date_debut
+            
+            for week_num in range(1, nb_semaines + 1):
+                week_start = date_debut + timedelta(weeks=week_num - 1)
+                week_end   = week_start + timedelta(days=6)
+                
+                if today < week_start:
+                    status = 'future'
+                elif today > week_end:
+                    status = 'past'
+                else:
+                    status = 'current'
+                    
+                from datetime import datetime as _dt
+                now_time = _dt.now().time()
+
+                seances_list = []
+                for s_num in range(1, seances_semaine + 1):
+                    seance = {'number': s_num}
+
+                    if status == 'current':
+                        # 1. Already recorded today?
+                        already_done = AttendanceSession.objects.filter(
+                            course=course,
+                            session_date=today,
+                            seance_number=s_num,
+                        ).exists()
+
+                        # 2. Check if PREVIOUS seance is finished (done or time expired)
+                        prev_finished = True  # seance 1 has no previous
+                        prev_heure_fin = None
+                        if s_num > 1:
+                            prev_done = AttendanceSession.objects.filter(
+                                course=course,
+                                session_date=today,
+                                seance_number=s_num - 1
+                            ).exists()
+                            prev_heure_fin = getattr(prof, f'heure_fin_s{s_num - 1}', None)
+                            prev_time_passed = prev_heure_fin and now_time > prev_heure_fin
+                            prev_finished = prev_done or prev_time_passed
+
+                        # 3. Get seance times from professor model
+                        heure_debut = getattr(prof, f'heure_debut_s{s_num}', None)
+                        heure_fin   = getattr(prof, f'heure_fin_s{s_num}', None)
+
+                        seance['heure_debut'] = heure_debut.strftime('%H:%M') if heure_debut else ''
+                        seance['heure_fin']   = heure_fin.strftime('%H:%M')   if heure_fin   else ''
+
+                        if already_done:
+                            seance['unlocked']    = False
+                            seance['lock_reason'] = 'done'
+                        elif not prev_finished:
+                            # Previous seance not finished yet
+                            seance['unlocked']    = False
+                            seance['lock_reason'] = 'prev_not_done'
+                            seance['prev_heure_fin'] = prev_heure_fin.strftime('%H:%M') if prev_heure_fin else ''
+                        elif heure_debut and now_time < heure_debut:
+                            seance['unlocked']    = False
+                            seance['lock_reason'] = 'not_yet'
+                        elif heure_fin and now_time > heure_fin:
+                            seance['unlocked']    = False
+                            seance['lock_reason'] = 'expired'
+                        else:
+                            seance['unlocked']    = True
+                            seance['lock_reason'] = None
+                    else:
+                        # Past / future week — locked at week level
+                        seance['unlocked']    = False
+                        seance['lock_reason'] = None
+                        seance['heure_debut'] = None
+                        seance['heure_fin']   = None
+
+                    seances_list.append(seance)
+
+                course_data['weeks'].append({
+                    'number':     week_num,
+                    'date_debut': week_start.strftime('%d/%m/%Y'),
+                    'date_fin':   week_end.strftime('%d/%m/%Y'),
+                    'seances':    seances_list,
+                    'status':     status,
+                })
+                
+        courses.append(course_data)
+        
+    return render(request, 'professor/dashboard.html', {
+        'professor_nom':    professor.nom,
+        'professor_prenom': professor.prenom,
+        'courses':          courses,
+        'today':            today.strftime('%d/%m/%Y'),
+        'today_full':       today.strftime('%A %d %B %Y'),
+    })
+
+@login_required_custom
+def take_attendance(request, course_id):
+    if not settings.FACE_RECOGNITION_ENABLED:
+        return _face_disabled_response(request)
+
+    professor_id = request.session.get('professor_id')
+
     course = Course.objects.get(id=course_id)
-    
+
     # Initialize session state if not exists
     if professor_id not in active_sessions:
         active_sessions[professor_id] = {'present_students': set(), 'camera_active': False}
-    
-    return render(request, 'professor/take_attendance.html', {'course': course, 'professor_id': professor_id})
 
+    week   = request.GET.get('week', 1)
+    seance = request.GET.get('seance', 1)
+
+    return render(request, 'professor/take_attendance.html', {
+        'course':       course,
+        'professor_id': professor_id,
+        'week':         week,
+        'seance':       seance,
+    })
+
+@login_required_custom
 def start_camera(request):
+    if not settings.FACE_RECOGNITION_ENABLED:
+        return JsonResponse({'status': 'disabled', 'message': 'Live face capture is available in local mode only.'}, status=400)
+
     professor_id = request.session.get('professor_id')
-    
+
     if professor_id in active_sessions:
         active_sessions[professor_id]['camera_active'] = True
-        
+
     return JsonResponse({'status': 'started'})
 
+@login_required_custom
 def stop_camera(request):
+    if not settings.FACE_RECOGNITION_ENABLED:
+        return JsonResponse({'status': 'disabled', 'message': 'Live face capture is available in local mode only.'}, status=400)
+
     professor_id = request.session.get('professor_id')
-    
+
     if professor_id in active_sessions:
         active_sessions[professor_id]['camera_active'] = False
-        
+
     return JsonResponse({'status': 'stopped'})
 
-def video_feed(request):
+@login_required_custom
+def video_feed(request, course_id):
+    if not settings.FACE_RECOGNITION_ENABLED:
+        return _face_disabled_response(request)
+
     professor_id = request.session.get('professor_id')
-    return StreamingHttpResponse(gen(VideoCamera(professor_id)),
+    return StreamingHttpResponse(gen(VideoCamera(professor_id, course_id)),
                     content_type='multipart/x-mixed-replace; boundary=frame')
 
+@login_required_custom
 def get_present_students(request):
     professor_id = request.session.get('professor_id')
     data = []
@@ -138,10 +311,11 @@ def get_present_students(request):
         student_ids = active_sessions[professor_id]['present_students']
         students = Student.objects.filter(id__in=student_ids)
         for s in students:
-            data.append({'full_name': s.full_name, 'time': timezone.now().strftime('%H:%M:%S')})
+            data.append({'full_name': f"{s.nom} {s.prenom}", 'time': timezone.now().strftime('%H:%M:%S')})
             
     return JsonResponse({'students': data})
 
+@login_required_custom
 def save_session(request):
     if request.method == 'POST':
         professor_id = request.session.get('professor_id')
@@ -173,13 +347,18 @@ def save_session(request):
             
             duration_hours = (end_dt - start_dt).total_seconds() / 3600.0
             
+            # Read week / seance from POST (sent by hidden inputs in the form)
+            week_num   = request.POST.get('week')
+            seance_num = request.POST.get('seance')
+
             # Create Session
             session = AttendanceSession.objects.create(
                 course=course,
                 session_date=timezone.now().date(),
                 start_time=start_time,
                 end_time=end_time,
-                duration=round(duration_hours, 2)
+                duration=round(duration_hours, 2),
+                seance_number=int(seance_num) if seance_num else 1,
             )
             
             # Get present students from memory
@@ -224,128 +403,135 @@ def save_session(request):
         
     return redirect('professor_dashboard')
 
+@login_required_custom
 def absence_list(request, course_id):
-    professor_id = request.session.get('professor_id')
-    if not professor_id:
-        return redirect('login')
-        
-    course = Course.objects.get(id=course_id)
-    total_students_filiere = Student.objects.filter(filiere=course.filiere).count()
-    date_str = request.GET.get('date')
+    course = get_object_or_404(Course, id=course_id)
 
-    # MODE 1: Weekly Summary (No date provided)
-    if not date_str:
-        today = timezone.now().date()
-        week_start = today - timedelta(days=today.weekday())
-        week_end = week_start + timedelta(days=6)
-        
-        sessions_weekly = AttendanceSession.objects.filter(
+    week   = request.GET.get('week', 1)
+    seance = request.GET.get('seance', 1)
+
+    # All students in this filiere
+    all_students = Student.objects.filter(
+        filiere=course.filiere
+    ).order_by('nom', 'prenom')
+
+    # Find the session for this course + seance_number
+    # Also filter by week using date range if date_debut is available
+    professor = course.professor
+    absent_ids = set()
+    try:
+        qs = AttendanceSession.objects.filter(
             course=course,
-            session_date__range=[week_start, week_end]
-        ).order_by('session_date', 'start_time')
-        
-        active_days = sorted(list(set(s.session_date for s in sessions_weekly)))
-        
-        if not active_days:
-            return render(request, 'professor/absence_list.html', {
-                'course': course,
-                'mode': 'weekly_active_days',
-                'active_days': [],
-                'selected_date': today
-            })
+            seance_number=int(seance)
+        )
+        # Narrow to the correct week by date range if planning data exists
+        if professor.date_debut and professor.nb_semaines:
+            from datetime import timedelta as _td
+            wstart = professor.date_debut + _td(weeks=int(week) - 1)
+            wend   = wstart + _td(days=6)
+            qs = qs.filter(session_date__range=[wstart, wend])
 
-        students = Student.objects.filter(filiere=course.filiere).order_by('full_name')
-        all_records = AttendanceRecord.objects.filter(
-            session__course=course,
-            session__session_date__range=[week_start, week_end]
-        ).select_related('student', 'session')
+        session = qs.latest('session_date')
+        absent_ids = set(
+            session.records.filter(status='absent')
+                           .values_list('student_id', flat=True)
+        )
+    except AttendanceSession.DoesNotExist:
+        absent_ids = set()
 
-        status_map = {}
-        for r in all_records:
-            s_id = r.student.id
-            day_key = r.session.session_date
-            if s_id not in status_map: status_map[s_id] = {}
-            if day_key not in status_map[s_id]: status_map[s_id][day_key] = False
-            if r.status == 'present': status_map[s_id][day_key] = True
-
-        students_rows = []
-        grand_total_absences = 0
-        for s in students:
-            row_status = []
-            student_absences = 0
-            for day in active_days:
-                is_present = status_map.get(s.id, {}).get(day, False)
-                status = "Présent" if is_present else "Absent"
-                if status == "Absent": student_absences += 1
-                row_status.append({'day': day.strftime('%Y-%m-%d'), 'status': status})
-            
-            grand_total_absences += student_absences
-            students_rows.append({
-                'student': s,
-                'status_list': row_status,
-                'total_absences': student_absences
-            })
-
-        # Weekly Absence Rate Calculation
-        total_possible = total_students_filiere * len(active_days)
-        weekly_absence_rate = 0
-        if total_possible > 0:
-            weekly_absence_rate = round((grand_total_absences / total_possible) * 100, 1)
-
-        return render(request, 'professor/absence_list.html', {
-            'course': course,
-            'mode': 'weekly_active_days',
-            'active_days': active_days,
-            'students_rows': students_rows,
-            'total_sessions': sessions_weekly.count(),
-            'total_absences': grand_total_absences,
-            'total_students': total_students_filiere,
-            'weekly_absence_rate': weekly_absence_rate,
-            'selected_date': today
+    # Build students list
+    students_data = []
+    for s in all_students:
+        students_data.append({
+            'name':      f"{s.nom} {s.prenom}",
+            'is_absent': s.id in absent_ids,
         })
 
-    # MODE 2: Daily View (Date provided)
-    try:
-        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-    except ValueError:
-        selected_date = timezone.now().date()
+    absent_count   = sum(1 for s in students_data if s['is_absent'])
+    total_students = len(students_data)
+    present_count  = total_students - absent_count
 
-    sessions_qs = AttendanceSession.objects.filter(
-        course=course, 
-        session_date=selected_date
-    ).order_by('start_time').prefetch_related('records', 'records__student')
-    
-    all_records_for_date = AttendanceRecord.objects.filter(
-        session__course=course,
-        session__session_date=selected_date
-    ).select_related('student')
-    
-    total_absences = all_records_for_date.filter(status='absent').count()
-    student_stats = {}
-    for record in all_records_for_date.filter(status='absent'):
-        s_id = record.student.id
-        if s_id not in student_stats:
-            student_stats[s_id] = {'name': record.student.full_name, 'count': 0}
-        student_stats[s_id]['count'] += 1
-    
-    absences_par_etudiant = sorted(student_stats.values(), key=lambda x: x['count'], reverse=True)
-    students_with_absences = len(student_stats)
-
-    sessions = []
-    for session in sessions_qs:
-        session.start_time_str = session.start_time.strftime("%H:%M") if session.start_time else "-"
-        session.end_time_str = session.end_time.strftime("%H:%M") if session.end_time else "-"
-        session.absent_count = session.records.filter(status='absent').count()
-        session.total_count = session.records.count()
-        sessions.append(session)
-    
     return render(request, 'professor/absence_list.html', {
-        'course': course, 
-        'sessions': sessions,
-        'selected_date': selected_date,
-        'total_absences': total_absences,
-        'absences_par_etudiant': absences_par_etudiant[:5],
-        'total_students': total_students_filiere,
-        'students_with_absences': students_with_absences,
-        'mode': 'daily'
+        'course':         course,
+        'week':           week,
+        'seance':         seance,
+        'students_data':  students_data,
+        'total_students': total_students,
+        'absent_count':   absent_count,
+        'present_count':  present_count,
+    })
+
+
+@login_required_custom
+def absence_total(request, course_id):
+    course    = get_object_or_404(Course, id=course_id)
+    professor = course.professor
+
+    nb_semaines     = int(professor.nb_semaines     or 0)
+    seances_semaine = int(professor.seances_semaine or 0)
+    date_debut      = professor.date_debut
+
+    # Build weeks structure
+    weeks = []
+    for w in range(1, nb_semaines + 1):
+        wstart = date_debut + timedelta(weeks=w - 1) if date_debut else None
+        wend   = wstart + timedelta(days=6) if wstart else None
+        weeks.append({'number': w, 'date_debut': wstart.strftime('%d/%m') if wstart else '?', 'date_fin': wend.strftime('%d/%m') if wend else '?', 'seances': list(range(1, seances_semaine + 1))})
+
+    students = Student.objects.filter(
+        filiere=course.filiere
+    ).order_by('nom', 'prenom')
+
+    # Build absence lookup: {week_num: {seance_num: set(student_ids)}}
+    absence_lookup = {}
+    sessions = AttendanceSession.objects.filter(course=course)
+    for session in sessions:
+        if date_debut and session.session_date:
+            delta      = (session.session_date - date_debut).days
+            week_num   = max(1, (delta // 7) + 1)
+            seance_num = session.seance_number or 1
+        else:
+            week_num, seance_num = 1, 1
+
+        absent_ids = set(
+            session.records.filter(status='absent')
+                           .values_list('student_id', flat=True)
+        )
+        absence_lookup.setdefault(week_num, {}).setdefault(seance_num, set())
+        absence_lookup[week_num][seance_num].update(absent_ids)
+
+    # Build per-student grid
+    students_grid    = []
+    global_absences  = 0
+    for student in students:
+        abs_dict = {}
+        total    = 0
+        for w in range(1, nb_semaines + 1):
+            abs_dict[w] = {}
+            for s in range(1, seances_semaine + 1):
+                is_absent      = student.id in absence_lookup.get(w, {}).get(s, set())
+                abs_dict[w][s] = is_absent
+                if is_absent:
+                    total += 1
+        global_absences += total
+        students_grid.append({
+            'nom':            student.nom,
+            'prenom':         student.prenom,
+            'absences':       abs_dict,
+            'total_absences': total,
+        })
+
+    # DEBUG
+    print("WEEK KEYS:", weeks[0].keys() if weeks else "empty")
+    print("FIRST WEEK:", weeks[0] if weeks else "empty")
+
+    return render(request, 'absence_total.html', {
+        'course':          course,
+        'nb_semaines':     nb_semaines,
+        'seances_semaine': seances_semaine,
+        'total_seances':   nb_semaines * seances_semaine,
+        'total_students':  students.count(),
+        'global_absences': global_absences,
+        'weeks':           weeks,
+        'students_grid':   students_grid,
     })

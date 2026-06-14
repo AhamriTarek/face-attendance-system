@@ -1,14 +1,17 @@
-import face_recognition
 import pickle
 import os
-import cv2
-import numpy as np
+
+# NOTE: face_recognition / cv2 / numpy are imported lazily inside
+# get_face_embedding so this module can be imported on a server without the
+# heavy libraries. serialize/deserialize below only need pickle, so they keep
+# working in cloud mode (e.g. for reading stored embeddings).
 
 def get_face_embedding(image_path, model='hog'):
     """
     Generates a face embedding for a given image path.
     Returns: (embedding_bytes, error_message)
     """
+    import face_recognition
     try:
         # Load image
         image = face_recognition.load_image_file(image_path)

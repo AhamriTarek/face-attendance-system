@@ -1,0 +1,408 @@
+{% extends 'base.html' %}
+{% load dict_extras %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 20, 40, 0.98));
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        border-radius: 16px;
+        padding: 1.6rem 2rem;
+        margin-bottom: 1.8rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #6366f1, #8b5cf6, #3b82f6);
+    }
+
+    .page-header h2 {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #f1f5f9;
+        margin: 0 0 0.3rem 0;
+    }
+
+    .page-header p {
+        color: #64748b;
+        font-size: 0.85rem;
+        margin: 0;
+    }
+
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        margin-bottom: 1.6rem;
+    }
+
+    .stat-card {
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+    }
+
+    .stat-num {
+        font-size: 1.5rem;
+        font-weight: 800;
+    }
+
+    .stat-lbl {
+        font-size: 0.7rem;
+        color: #64748b;
+        margin-top: 3px;
+    }
+
+    .c-purple {
+        color: #a78bfa;
+    }
+
+    .c-red {
+        color: #f87171;
+    }
+
+    .c-blue {
+        color: #60a5fa;
+    }
+
+    .c-green {
+        color: #34d399;
+    }
+
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #94a3b8;
+        padding: 7px 16px;
+        border-radius: 9px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.82rem;
+        transition: .2s;
+        margin-bottom: 1.4rem;
+    }
+
+    .btn-back:hover {
+        background: rgba(255, 255, 255, 0.12);
+        color: #e2e8f0;
+        text-decoration: none;
+    }
+
+    /* ── EXCEL TABLE ── */
+    .table-wrapper {
+        background: rgba(20, 27, 48, 0.95);
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        border-radius: 14px;
+        overflow: hidden;
+    }
+
+    .table-scroll {
+        overflow-x: auto;
+    }
+
+    .table-scroll::-webkit-scrollbar {
+        height: 5px;
+    }
+
+    .table-scroll::-webkit-scrollbar-thumb {
+        background: rgba(139, 92, 246, 0.4);
+        border-radius: 3px;
+    }
+
+    table.xt {
+        border-collapse: collapse;
+        font-size: 0.76rem;
+        min-width: 500px;
+        width: 100%;
+    }
+
+    .xt th,
+    .xt td {
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        text-align: center;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    /* HEADER ROW 1 */
+    .xt .tr-title th {
+        padding: 7px 10px;
+        font-weight: 800;
+    }
+
+    .xt .tr-title .th-course {
+        background: rgba(59, 130, 246, 0.15);
+        color: #93c5fd;
+        font-size: 0.8rem;
+        text-align: center;
+        border-right: 2px solid rgba(99, 102, 241, 0.4);
+    }
+
+    .xt .tr-title .th-week {
+        background: rgba(59, 130, 246, 0.12);
+        color: #93c5fd;
+        font-size: 0.75rem;
+        border-left: 2px solid rgba(99, 102, 241, 0.35);
+    }
+
+    /* HEADER ROW 2 */
+    .xt .tr-cols th {
+        padding: 5px 8px;
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+
+    .xt .tr-cols .th-at {
+        background: rgba(30, 41, 59, 0.9);
+        color: #64748b;
+        width: 28px;
+    }
+
+    .xt .tr-cols .th-nom {
+        background: rgba(30, 41, 59, 0.9);
+        color: #94a3b8;
+        text-align: left;
+        padding-left: 10px;
+        min-width: 100px;
+    }
+
+    .xt .tr-cols .th-prenom {
+        background: rgba(30, 41, 59, 0.9);
+        color: #94a3b8;
+        text-align: left;
+        padding-left: 8px;
+        min-width: 100px;
+    }
+
+    .xt .tr-cols .th-total {
+        background: rgba(30, 41, 59, 0.9);
+        color: #64748b;
+    }
+
+    .xt .tr-cols .th-seance {
+        background: rgba(30, 41, 59, 0.85);
+        color: #64748b;
+        width: 32px;
+        font-size: 0.65rem;
+    }
+
+    .xt .tr-cols .th-seance.sem-first {
+        border-left: 2px solid rgba(99, 102, 241, 0.35);
+    }
+
+    /* BODY ROWS */
+    .xt tbody tr {
+        transition: .12s;
+    }
+
+    .xt tbody tr:hover {
+        background: rgba(99, 102, 241, 0.06);
+    }
+
+    .xt tbody td {
+        padding: 5px 6px;
+    }
+
+    .xt tbody .td-num {
+        color: #475569;
+        font-size: 0.7rem;
+        width: 28px;
+        background: rgba(15, 23, 42, 0.6);
+    }
+
+    .xt tbody .td-nom {
+        text-align: left;
+        padding-left: 10px;
+        color: #e2e8f0;
+        font-weight: 600;
+        min-width: 100px;
+        background: rgba(15, 23, 42, 0.4);
+    }
+
+    .xt tbody .td-prenom {
+        text-align: left;
+        padding-left: 8px;
+        color: #cbd5e1;
+        min-width: 100px;
+        background: rgba(15, 23, 42, 0.4);
+    }
+
+    .xt tbody .td-total {
+        font-weight: 800;
+        font-size: 0.8rem;
+        background: rgba(15, 23, 42, 0.6);
+    }
+
+    .xt tbody .td-seance {
+        width: 32px;
+        background: rgba(15, 23, 42, 0.3);
+    }
+
+    .xt tbody .td-seance.sem-first {
+        border-left: 2px solid rgba(99, 102, 241, 0.3);
+    }
+
+    /* Checkbox cell */
+    .chk-box {
+        width: 18px;
+        height: 18px;
+        border-radius: 3px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: auto;
+    }
+
+    .chk-absent {
+        background: #3b82f6;
+        border: 1.5px solid #2563eb;
+    }
+
+    .chk-absent::after {
+        content: '✓';
+        color: white;
+        font-size: 0.65rem;
+        font-weight: 900;
+    }
+
+    .chk-present {
+        background: rgba(255, 255, 255, 0.07);
+        border: 1.5px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .tot-0 {
+        color: #34d399;
+    }
+
+    .tot-few {
+        color: #fbbf24;
+    }
+
+    .tot-many {
+        color: #f87171;
+    }
+
+    .empty-grid {
+        text-align: center;
+        padding: 3rem;
+        color: #64748b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<a href="{% url 'professor_dashboard' %}" class="btn-back">← Retour au tableau de bord</a>
+
+<div class="page-header">
+    <h2>📊 Historique Total des Absences</h2>
+    <p>{{ course.name }} · Filière : <strong style="color:#94a3b8">{{ course.filiere }}</strong></p>
+</div>
+
+<div class="stats-row">
+    <div class="stat-card">
+        <div class="stat-num c-blue">{{ total_students }}</div>
+        <div class="stat-lbl">Étudiants</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-num c-purple">{{ nb_semaines }}</div>
+        <div class="stat-lbl">Semaines</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-num c-purple">{{ seances_semaine }}</div>
+        <div class="stat-lbl">Séances / Sem.</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-num c-blue">{{ total_seances }}</div>
+        <div class="stat-lbl">Total séances</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-num c-red">{{ global_absences }}</div>
+        <div class="stat-lbl">Absences globales</div>
+    </div>
+</div>
+
+{% if nb_semaines == 0 or seances_semaine == 0 %}
+<div class="table-wrapper">
+    <div class="empty-grid">⚠️ Aucun planning défini pour ce cours.</div>
+</div>
+
+{% elif students_grid %}
+<div class="table-wrapper">
+    <div class="table-scroll">
+        <table class="xt">
+            <thead>
+                <!-- ROW 1: course title + week spans -->
+                <tr class="tr-title">
+                    <th class="th-course" colspan="3">{{ course.name }} · {{ course.filiere }}</th>
+                    <th class="th-course"></th>
+                    {% for week in weeks %}
+                    <th class="th-week" colspan="{{ seances_semaine }}">S{{ week.number }}<br><small
+                            style="font-weight:400;font-size:0.62rem;color:#7c6fcd;">{{ week.date_debut }}-{{ week.date_fin }}</small></th>
+                    {% endfor %}
+                </tr>
+                <!-- ROW 2: @, Nom, Prénom, Total, then séances -->
+                <tr class="tr-cols">
+                    <th class="th-at">@</th>
+                    <th class="th-nom">Nom</th>
+                    <th class="th-prenom">Prénom</th>
+                    <th class="th-total">Total</th>
+                    {% for week in weeks %}
+                    {% for s in week.seances %}
+                    <th class="th-seance {% if forloop.first %}sem-first{% endif %}">S{{ s }}</th>
+                    {% endfor %}
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in students_grid %}
+                <tr>
+                    <td class="td-num">{{ forloop.counter }}</td>
+                    <td class="td-nom">{{ row.nom }}</td>
+                    <td class="td-prenom">{{ row.prenom }}</td>
+                    <td
+                        class="td-total {% if row.total_absences == 0 %}tot-0{% elif row.total_absences <= 2 %}tot-few{% else %}tot-many{% endif %}">
+                        {{ row.total_absences }}
+                    </td>
+                    {% for week in weeks %}
+                    {% with wabs=row.absences|get_item:week.number %}
+                    {% for s in week.seances %}
+                    <td class="td-seance {% if forloop.first %}sem-first{% endif %}">
+                        {% with is_abs=wabs|get_item:s %}
+                        <div class="chk-box {% if is_abs %}chk-absent{% else %}chk-present{% endif %}"></div>
+                        {% endwith %}
+                    </td>
+                    {% endfor %}
+                    {% endwith %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+<div class="table-wrapper">
+    <div class="empty-grid">📭 Aucun étudiant trouvé dans la filière <strong>{{ course.filiere }}</strong>.</div>
+</div>
+{% endif %}
+
+{% endblock %}

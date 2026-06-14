@@ -5,12 +5,17 @@ from .models import Course
 
 @professor_required
 def professor_dashboard(request):
-    professor = Professor.objects.get(id=request.session['user_id'])
+    professor = Professor.objects.get(id=request.session['professor_id'])
     courses = Course.objects.filter(professor=professor)
-    return render(request, 'professor/dashboard.html', {'courses': courses, 'professor': professor})
+    return render(request, 'professor/dashboard.html', {
+        'courses': courses,
+        'professor': professor,
+        'professor_nom': professor.nom,
+        'professor_prenom': professor.prenom,
+    })
 
 @professor_required
 def course_list(request):
-    professor = Professor.objects.get(id=request.session['user_id'])
+    professor = Professor.objects.get(id=request.session['professor_id'])
     courses = Course.objects.filter(professor=professor)
-    return render(request, 'professor/course_list.html', {'courses': courses})
+    return render(request, 'professor/course_list.html', {'courses': courses, 'professor': professor})

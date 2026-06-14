@@ -1,59 +1,575 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+<style>
+    body {
+        font-family: 'Inter', sans-serif !important;
+        background: #0a0a0f;
+        background-image: radial-gradient(ellipse at top, #1a0533 0%, #0a0a0f 70%);
+        min-height: 100vh;
+        position: relative;
+        overflow-x: hidden;
+    }
+
+    html, body {
+        min-height: 100vh;
+        transition: background-color 0.5s ease, background 0.5s ease;
+    }
+
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background-image:
+            linear-gradient(rgba(139, 92, 246, 0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(139, 92, 246, 0.04) 1px, transparent 1px);
+        background-size: 60px 60px;
+        pointer-events: none;
+        z-index: 0;
+        animation: gridPulse 8s ease-in-out infinite;
+    }
+
+    @keyframes gridPulse {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+    }
+
+    body::after {
+        content: '';
+        position: fixed;
+        width: 600px; height: 600px;
+        background: radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 70%);
+        top: -200px; right: -200px;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 0;
+        animation: orbDrift 20s ease-in-out infinite;
+    }
+
+    @keyframes orbDrift {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        33% { transform: translate(-60px, 80px) scale(1.1); }
+        66% { transform: translate(40px, -40px) scale(0.95); }
+    }
+
+    .container { position: relative; }
+    .btn-outline-danger:active { transform: translateY(0) !important; }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulseGlow {
+        0%, 100% { text-shadow: 0 0 20px currentColor; }
+        50% { text-shadow: 0 0 40px currentColor, 0 0 60px currentColor; }
+    }
+
+    @keyframes shimmer {
+        0% { left: -100%; }
+        100% { left: 200%; }
+    }
+
+    /* ── STAT CARDS ── */
+    .stat-card {
+        background: linear-gradient(145deg, rgba(20, 27, 45, 0.9), rgba(15, 20, 35, 0.95));
+        border-radius: 20px;
+        padding: 1.2rem 1.5rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.05);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        cursor: default;
+    }
+
+    .stat-card::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.03), transparent);
+        border-radius: 20px;
+        pointer-events: none;
+    }
+
+    .stat-card:hover { transform: translateY(-10px) scale(1.02); }
+
+    .stat-card--blue {
+        border-top: 3px solid #3b82f6;
+        box-shadow: 0 0 30px rgba(59,130,246,0.25), 0 20px 60px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.05);
+        animation: fadeInUp 0.6s 0.1s ease both;
+    }
+    .stat-card--blue:hover { box-shadow: 0 0 50px rgba(59,130,246,0.45), 0 30px 70px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.08); }
+
+    .stat-card--green {
+        border-top: 3px solid #10b981;
+        box-shadow: 0 0 30px rgba(16,185,129,0.25), 0 20px 60px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.05);
+        animation: fadeInUp 0.6s 0.2s ease both;
+    }
+    .stat-card--green:hover { box-shadow: 0 0 50px rgba(16,185,129,0.45), 0 30px 70px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.08); }
+
+    .stat-card--cyan {
+        border-top: 3px solid #06b6d4;
+        box-shadow: 0 0 30px rgba(6,182,212,0.25), 0 20px 60px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.05);
+        animation: fadeInUp 0.6s 0.3s ease both;
+    }
+    .stat-card--cyan:hover { box-shadow: 0 0 50px rgba(6,182,212,0.45), 0 30px 70px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.08); }
+
+    .stat-card .card-emoji { font-size: 1.4rem; display: block; margin-bottom: 0.3rem; filter: drop-shadow(0 0 8px rgba(255,255,255,0.2)); }
+    .stat-card .stat-num { display: block; font-family: 'Inter', sans-serif; font-size: 2.8rem; font-weight: 800; line-height: 1; margin-bottom: 0.3rem; animation: pulseGlow 3s ease-in-out infinite; }
+    .stat-card--blue .stat-num { color: #60a5fa; }
+    .stat-card--green .stat-num { color: #34d399; }
+    .stat-card--cyan .stat-num { color: #22d3ee; }
+    .stat-card .stat-label { font-size: 0.78rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(148,163,184,0.75); }
+
+    /* ── ACTION CARDS ── */
+    .action-card {
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 20px;
+        padding: 1.2rem 1.4rem;
+        height: 100%;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .action-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 20px;
+        opacity: 0;
+        transition: opacity 0.35s ease;
+        pointer-events: none;
+    }
+
+    .action-card--blue::before { background: radial-gradient(circle at 50% 0%, rgba(59,130,246,0.08), transparent 70%); }
+    .action-card--green::before { background: radial-gradient(circle at 50% 0%, rgba(16,185,129,0.08), transparent 70%); }
+    .action-card--cyan::before { background: radial-gradient(circle at 50% 0%, rgba(6,182,212,0.08), transparent 70%); }
+    .action-card--red::before { background: radial-gradient(circle at 50% 0%, rgba(239,68,68,0.08), transparent 70%); }
+
+    .action-card:hover { background: rgba(255,255,255,0.04); transform: translateY(-4px); }
+    .action-card:hover::before { opacity: 1; }
+    .action-card--blue:hover { border-color: rgba(59,130,246,0.4); }
+    .action-card--green:hover { border-color: rgba(16,185,129,0.4); }
+    .action-card--cyan:hover { border-color: rgba(6,182,212,0.4); }
+    .action-card--red:hover { border-color: rgba(239,68,68,0.4); }
+
+    /* ── BACKGROUND IMAGES ── */
+    .action-card-prof {
+        background-image: linear-gradient(rgba(10,10,20,0.75), rgba(10,10,20,0.85)),
+        url("{% static 'images/prof.png' %}");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    .action-card-etud {
+        background-image: linear-gradient(rgba(10,10,20,0.75), rgba(10,10,20,0.85)),
+        url("{% static 'images/etud.png' %}");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    .action-card-filiere {
+        background-image: linear-gradient(rgba(10,10,20,0.75), rgba(10,10,20,0.85)),
+        url("{% static 'images/File.png' %}");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    .action-card-absence {
+        background-image: linear-gradient(rgba(10,10,20,0.75), rgba(20,5,5,0.88)),
+        url("{% static 'images/absence.JPG' %}");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    .action-card h4 { font-family: 'Inter', sans-serif; font-size: 1.05rem; font-weight: 700; color: #f1f5f9; margin-bottom: 0.5rem; }
+    .action-card p { color: rgba(148,163,184,0.7); font-size: 0.85rem; line-height: 1.6; margin-bottom: 1.5rem; }
+
+    /* ── ACTION BUTTONS ── */
+    .btn-action {
+        display: block;
+        width: 100%;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 12px;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: #fff;
+        text-align: center;
+        text-decoration: none;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn-action::before {
+        content: '';
+        position: absolute;
+        top: 0; left: -100%;
+        width: 100%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+        transition: left 0.45s ease;
+    }
+
+    .btn-action:hover::before { left: 100%; }
+    .btn-action:hover { transform: translateY(-2px); color: #fff; }
+    .btn-action:active { transform: translateY(0px); }
+
+    .btn-action--blue { background: linear-gradient(135deg, #2563eb, #7c3aed); box-shadow: 0 8px 25px rgba(59,130,246,0.4), 0 1px 0 rgba(255,255,255,0.2) inset; }
+    .btn-action--blue:hover { box-shadow: 0 12px 35px rgba(59,130,246,0.55), 0 1px 0 rgba(255,255,255,0.2) inset; }
+    .btn-action--green { background: linear-gradient(135deg, #059669, #10b981); box-shadow: 0 8px 25px rgba(16,185,129,0.4), 0 1px 0 rgba(255,255,255,0.2) inset; }
+    .btn-action--green:hover { box-shadow: 0 12px 35px rgba(16,185,129,0.55), 0 1px 0 rgba(255,255,255,0.2) inset; }
+    .btn-action--cyan { background: linear-gradient(135deg, #0891b2, #06b6d4); box-shadow: 0 8px 25px rgba(6,182,212,0.4), 0 1px 0 rgba(255,255,255,0.2) inset; }
+    .btn-action--cyan:hover { box-shadow: 0 12px 35px rgba(6,182,212,0.55), 0 1px 0 rgba(255,255,255,0.2) inset; }
+    .btn-action--red { background: linear-gradient(135deg, #dc2626, #ef4444); box-shadow: 0 8px 25px rgba(239,68,68,0.4), 0 1px 0 rgba(255,255,255,0.2) inset; }
+    .btn-action--red:hover { box-shadow: 0 12px 35px rgba(239,68,68,0.55), 0 1px 0 rgba(255,255,255,0.2) inset; }
+
+    .action-card { animation: fadeInUp 0.6s ease both; }
+    .action-anim-1 { animation-delay: 0.4s; }
+    .action-anim-2 { animation-delay: 0.5s; }
+    .action-anim-3 { animation-delay: 0.6s; }
+    .action-anim-4 { animation-delay: 0.7s; }
+
+    /* ── SECTION LABELS ── */
+    .section-label {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2.5px;
+        color: rgba(139, 92, 246, 0.65);
+        margin-bottom: 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-label::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(to right, rgba(139,92,246,0.2), transparent);
+    }
+
+    /* ── NAVBAR ── */
+    .admin-navbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 2.5rem;
+        background: linear-gradient(135deg, #0d0d1a 0%, #1a0533 50%, #0d0d1a 100%);
+        border-bottom: 2px solid transparent;
+        border-image: linear-gradient(90deg, #8b5cf6, #3b82f6, #8b5cf6) 1;
+        box-shadow: 0 4px 40px rgba(139,92,246,0.4), 0 0 80px rgba(59,130,246,0.1);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        animation: navSlideDown 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    .navbar-left { display: flex; align-items: center; gap: 15px; }
+
+    .admin-avatar-ring {
+        width: 48px; height: 48px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #8b5cf6, #3b82f6, #8b5cf6);
+        padding: 2px;
+        box-shadow: 0 0 20px rgba(139,92,246,0.8), 0 0 40px rgba(139,92,246,0.4);
+        animation: ringPulse 2s ease-in-out infinite;
+    }
+
+    .admin-avatar { width: 100%; height: 100%; border-radius: 50%; object-fit: contain; background: #0d0d1a; display: block; filter: none !important; }
+
+    .navbar-title {
+        background: linear-gradient(135deg, #ffffff 0%, #a78bfa 40%, #60a5fa 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 800;
+        font-size: 1.2rem;
+        letter-spacing: 0.03em;
+        animation: titleGlow 3s ease-in-out infinite;
+    }
+
+    .btn-logout {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        padding: 0.6rem 1.5rem;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 0.9rem;
+        border: 1px solid rgba(239,68,68,0.5);
+        box-shadow: 0 4px 20px rgba(239,68,68,0.5), 0 1px 0 rgba(255,255,255,0.2) inset;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .btn-logout:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 10px 30px rgba(239,68,68,0.7), 0 0 60px rgba(239,68,68,0.3); color: white; text-decoration: none; }
+    .btn-logout:active { transform: translateY(0) scale(0.98); }
+
+    .section-stats { margin-top: 1rem !important; padding-top: 0.5rem; }
+
+    @keyframes navSlideDown {
+        from { opacity: 0; transform: translateY(-30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes ringPulse {
+        0%, 100% { box-shadow: 0 0 20px rgba(139,92,246,0.8), 0 0 40px rgba(139,92,246,0.4); }
+        50% { box-shadow: 0 0 30px rgba(139,92,246,1), 0 0 60px rgba(139,92,246,0.6); }
+    }
+
+    @keyframes titleGlow {
+        0%, 100% { filter: brightness(1); }
+        50% { filter: brightness(1.3) drop-shadow(0 0 8px rgba(167,139,250,0.8)); }
+    }
+
+    @media (max-width: 768px) { .navbar-title { font-size: 1rem; } }
+
+    /* ── THEME PICKER ── */
+    .theme-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 15px 10px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-height: 100px;
+    }
+
+    .theme-card:hover { background: rgba(255,255,255,0.08); border-color: #8b5cf6; transform: translateY(-4px); box-shadow: 0 10px 30px rgba(0,0,0,0.3), 0 0 20px rgba(139,92,246,0.2); }
+    .theme-color-dot { width: 32px; height: 32px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    .theme-card span { color: #e2e8f0; font-size: 0.85rem; font-weight: 600; text-align: center; line-height: 1.2; }
+    .theme-welcome-msg { color: rgba(148,163,184,0.8); font-size: 0.85rem; text-align: center; margin-bottom: 1rem; padding: 0.6rem 1rem; background: rgba(139,92,246,0.08); border-radius: 10px; border: 1px solid rgba(139,92,246,0.15); }
+</style>
+{% endblock %}
+
+{% block navbar %}
+<nav class="admin-navbar">
+    <div class="navbar-left">
+        <div class="admin-avatar-ring">
+            <img src="{% static 'images/admin1.png' %}" class="admin-avatar">
+        </div>
+        <span class="navbar-title">Tableau de Bord Admin</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <button id="themeBtn" onclick="toggleThemePicker()" style="
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: white;
+            width: 42px; height: 42px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+            🎨
+        </button>
+        <a href="{% url 'logout' %}" class="btn-logout">Déconnexion</a>
+    </div>
+</nav>
+{% endblock navbar %}
 
 {% block content %}
-<div class="row mb-5">
-    <div class="col-12">
-        <div class="glass-card">
-            <h2 class="mb-0"><i class="fa-solid fa-user-shield me-2"></i>Tableau de Bord Admin</h2>
-            <p class="text-secondary">Gérez le système de présence faciale</p>
+
+<p class="section-label section-stats">Statistiques en temps réel</p>
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="stat-card stat-card--blue">
+            <span class="card-emoji">👥</span>
+            <span class="stat-num">{{ professor_count }}</span>
+            <span class="stat-label">Professeurs</span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card stat-card--green">
+            <span class="card-emoji">🎓</span>
+            <span class="stat-num">{{ student_count }}</span>
+            <span class="stat-label">Étudiants</span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card stat-card--cyan">
+            <span class="card-emoji">📚</span>
+            <span class="stat-num">{{ filieres_count }}</span>
+            <span class="stat-label">Filières</span>
         </div>
     </div>
 </div>
 
-<div class="row g-4 mb-5">
-    <!-- Stats -->
-    <div class="col-md-4">
-        <div class="glass-card text-center">
-            <h1 class="display-4 fw-bold text-primary">{{ professor_count }}</h1>
-            <p class="text-white">Professeurs</p>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="glass-card text-center">
-            <h1 class="display-4 fw-bold text-success">{{ student_count }}</h1>
-            <p class="text-white">Étudiants</p>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="glass-card text-center">
-            <h1 class="display-4 fw-bold text-info">{{ course_count }}</h1>
-            <p class="text-white">Matières</p>
-        </div>
-    </div>
-</div>
-
+<p class="section-label">Actions rapides</p>
 <div class="row g-4">
-    <!-- Actions -->
-    <div class="col-md-4">
-        <div class="glass-card h-100">
-            <h4><i class="fa-solid fa-chalkboard-user me-2"></i>Professeurs</h4>
-            <p class="text-secondary small">Gérer les professeurs et leurs accès.</p>
-            <a href="{% url 'create_professor' %}" class="btn btn-premium w-100">Créer un Professeur</a>
+
+    <div class="col-md-3">
+        <div class="action-card action-card--blue action-card-prof action-anim-1">
+            <h4><i class="fa-solid fa-chalkboard-user me-2" style="color:#60a5fa;"></i>Professeurs</h4>
+            <p>Gérer les professeurs et leurs accès.</p>
+            <a href="{% url 'create_professor' %}" class="btn-action btn-action--blue">Créer un Professeur</a>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="glass-card h-100">
-            <h4><i class="fa-solid fa-graduation-cap me-2"></i>Étudiants</h4>
-            <p class="text-secondary small">Ajouter des étudiants avec reconnaissance faciale.</p>
-            <a href="{% url 'add_student' %}" class="btn btn-premium w-100">Ajouter Étudiant (Face ID)</a>
+
+    <div class="col-md-3">
+        <div class="action-card action-card--green action-card-etud action-anim-2">
+            <h4><i class="fa-solid fa-graduation-cap me-2" style="color:#34d399;"></i>Filière & Étudiants</h4>
+            <p>Ajouter une filière et inscrire ses étudiants avec reconnaissance faciale.</p>
+            <a href="{% url 'add_student' %}" class="btn-action btn-action--green">Ajouter Filière & Étudiants</a>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="glass-card h-100">
-            <h4><i class="fa-solid fa-book-open me-2"></i>Matières</h4>
-            <p class="text-secondary small">Affecter des matières aux professeurs.</p>
-            <a href="{% url 'create_course' %}" class="btn btn-premium w-100">Créer une Matière</a>
+
+    <div class="col-md-3">
+        <div class="action-card action-card--cyan action-card-filiere action-anim-3">
+            <h4><i class="fa-solid fa-layer-group me-2" style="color:#22d3ee;"></i>Infos Filières</h4>
+            <p>Voir tous les professeurs et étudiants par filière.</p>
+            <a href="{% url 'create_course' %}" class="btn-action btn-action--cyan">Infos Filières</a>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="action-card action-card--red action-card-absence action-anim-4">
+            <h4><i class="fa-solid fa-triangle-exclamation me-2" style="color:#f87171;"></i>Gestion Absences</h4>
+            <p>Définir les seuils et voir les alertes critiques par filière.</p>
+            <a href="{% url 'absence_rules' %}" class="btn-action btn-action--red">Gérer les Règles</a>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── THEME PICKER MODAL ── -->
+<div id="themePicker" style="
+    display: none;
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border: 1px solid rgba(139,92,246,0.4);
+    border-radius: 20px;
+    padding: 2rem;
+    z-index: 9999;
+    width: 420px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 60px rgba(139,92,246,0.2);">
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h3 style="color:white; margin:0;">🎨 Choisir un Thème</h3>
+        <button onclick="closeThemePicker()" style="background:none; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer;">✕</button>
+    </div>
+
+    <div id="welcomeMsg" class="theme-welcome-msg" style="display:none;">
+        👋 Bienvenue ! Choisissez votre thème une seule fois.
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; padding: 10px;">
+        <div class="theme-card" onclick="applyTheme('#0f0f1a')">
+            <div class="theme-color-dot" style="background-color:#0f0f1a; border: 1px solid #444;"></div>
+            <span>Noir</span>
+        </div>
+        <div class="theme-card" onclick="applyTheme('#0a1628')">
+            <div class="theme-color-dot" style="background-color:#0a1628;"></div>
+            <span>Bleu Nuit</span>
+        </div>
+        <div class="theme-card" onclick="applyTheme('#1a0a2e')">
+            <div class="theme-color-dot" style="background-color:#1a0a2e;"></div>
+            <span>Violet</span>
+        </div>
+        <div class="theme-card" onclick="applyTheme('#0a1f0a')">
+            <div class="theme-color-dot" style="background-color:#0a1f0a;"></div>
+            <span>Vert Forêt</span>
+        </div>
+        <div class="theme-card" onclick="applyTheme('#1a0f00')">
+            <div class="theme-color-dot" style="background-color:#1a0f00;"></div>
+            <span>Brun</span>
+        </div>
+        <div class="theme-card" onclick="applyTheme('#0f172a')">
+            <div class="theme-color-dot" style="background-color:#0f172a;"></div>
+            <span>Gris Ardoise</span>
+        </div>
+        <div class="theme-card" onclick="applyTheme('#001a1a')">
+            <div class="theme-color-dot" style="background-color:#001a1a;"></div>
+            <span>Teal</span>
+        </div>
+        <div class="theme-card" onclick="applyTheme('#1f0a0a')">
+            <div class="theme-color-dot" style="background-color:#1f0a0a;"></div>
+            <span>Rouge Sombre</span>
+        </div>
+        <div class="theme-card" onclick="applyTheme('#ffffff')">
+            <div class="theme-color-dot" style="background-color:#ffffff; border: 1px solid #ccc;"></div>
+            <span>Blanc</span>
         </div>
     </div>
 </div>
+
+<div id="themeOverlay" onclick="closeThemePicker()" style="
+    display:none; position:fixed; top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index:9998;"></div>
+
+<script>
+    function toggleThemePicker() {
+        const picker = document.getElementById('themePicker');
+        const overlay = document.getElementById('themeOverlay');
+        const isHidden = picker.style.display === 'none' || picker.style.display === '';
+        if (isHidden) { picker.style.display = 'block'; overlay.style.display = 'block'; }
+        else { closeThemePicker(); }
+    }
+
+    function closeThemePicker() {
+        document.getElementById('themePicker').style.display = 'none';
+        document.getElementById('themeOverlay').style.display = 'none';
+    }
+
+    function applyTheme(bgColor) {
+        applyThemeSilent(bgColor);
+        localStorage.setItem('adminThemeBg', bgColor);
+        localStorage.setItem('adminThemeChosen', 'true');
+        const btn = document.getElementById('themeBtn');
+        btn.style.transform = 'scale(1.2) rotate(20deg)';
+        setTimeout(() => { btn.style.transform = 'scale(1) rotate(0deg)'; }, 300);
+        closeThemePicker();
+    }
+
+    function applyThemeSilent(bgColor) {
+        document.body.style.background = bgColor;
+        document.body.style.backgroundColor = bgColor;
+        document.documentElement.style.background = bgColor;
+        document.documentElement.style.backgroundColor = bgColor;
+
+        const navbar = document.querySelector('.admin-navbar');
+        if (navbar) {
+            navbar.style.background = bgColor;
+            navbar.style.backgroundColor = bgColor;
+            navbar.style.borderBottom = '2px solid rgba(139,92,246,0.5)';
+            navbar.style.boxShadow = '0 4px 40px rgba(139,92,246,0.3)';
+        }
+    }
+
+    window.addEventListener('load', function () {
+        const savedBg = localStorage.getItem('adminThemeBg');
+        const alreadyChosen = localStorage.getItem('adminThemeChosen');
+        if (savedBg && alreadyChosen === 'true') {
+            applyThemeSilent(savedBg);
+        } else {
+            document.getElementById('welcomeMsg').style.display = 'block';
+            toggleThemePicker();
+        }
+    });
+</script>
+
 {% endblock %}

@@ -1,38 +1,281 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    body { font-family: 'Inter', sans-serif; }
+
+    .greeting-card {
+        background: linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,20,40,0.95));
+        border: 1px solid rgba(139,92,246,0.25);
+        border-radius: 16px; padding: 1.5rem 2rem; margin-bottom: 1.5rem;
+        position: relative; overflow: hidden;
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+    }
+    .greeting-card::before {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        background: linear-gradient(90deg, #8b5cf6, #3b82f6, #8b5cf6);
+    }
+    .greeting-card h2 { font-size: 1.25rem; font-weight: 800; color: #f1f5f9; margin-bottom: 0.15rem; }
+    .greeting-card p  { color: #64748b; font-size: 0.85rem; margin: 0; }
+    .greeting-date {
+        font-size: 0.75rem; color: #a78bfa; font-weight: 600;
+        background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2);
+        border-radius: 7px; padding: 3px 10px; margin-top: 5px; display: inline-block;
+    }
+    .btn-historique-total {
+        background: rgba(99,102,241,0.15); color: #818cf8;
+        padding: 0.65rem 1.3rem; border-radius: 10px;
+        text-decoration: none; font-weight: 700; font-size: 0.85rem;
+        display: inline-flex; align-items: center; gap: 8px;
+        border: 1px solid rgba(99,102,241,0.35); transition: all 0.2s ease; white-space: nowrap;
+    }
+    .btn-historique-total:hover { background: rgba(99,102,241,0.28); transform: translateY(-1px); color: #818cf8; text-decoration: none; }
+
+    .week-divider-line {
+        display: flex; align-items: center; gap: 10px;
+        margin: 1.8rem 0 1rem 0; font-size: 0.88rem; font-weight: 700;
+    }
+    .week-divider-line::after { content: ''; flex: 1; height: 1px; }
+    .week-divider-line.current { color: #a78bfa; }
+    .week-divider-line.current::after { background: rgba(139,92,246,0.4); }
+    .week-divider-line.past { color: #475569; }
+    .week-divider-line.past::after { background: rgba(71,85,105,0.25); }
+    .week-divider-line.future { color: #374151; }
+    .week-divider-line.future::after { background: rgba(55,65,81,0.2); }
+
+    .week-badge { font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+    .badge-current { background: rgba(139,92,246,0.2); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
+    .badge-past    { background: rgba(71,85,105,0.2);  color: #64748b; border: 1px solid rgba(71,85,105,0.2); }
+    .badge-future  { background: rgba(55,65,81,0.15);  color: #374151; border: 1px solid rgba(55,65,81,0.15); }
+
+    .seance-label { font-size: 0.85rem; font-weight: 600; margin: 0.8rem 0 0.4rem 0; }
+    .seance-label.active { color: #94a3b8; }
+    .seance-label.locked { color: #374151; }
+
+    .seance-card { border-radius: 14px; padding: 1.2rem 1.5rem; margin-bottom: 0.4rem; transition: all 0.2s ease; }
+    .seance-card.active { background: rgba(30,41,59,0.8); border: 1px solid rgba(139,92,246,0.2); }
+    .seance-card.locked { background: rgba(15,20,35,0.5); border: 1px solid rgba(255,255,255,0.04); opacity: 0.5; pointer-events: none; }
+    .seance-card.done   { background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.15); opacity: 0.7; pointer-events: none; }
+
+    .seance-card-title { font-size: 0.95rem; font-weight: 800; margin-bottom: 0.2rem; display: flex; align-items: center; gap: 8px; }
+    .seance-card-title.active { color: #f1f5f9; }
+    .seance-card-title.locked { color: #374151; }
+    .seance-card-title.done   { color: #94a3b8; }
+
+    .seance-card-filiere { font-size: 0.8rem; margin-bottom: 0.9rem; }
+    .seance-card-filiere.active { color: #64748b; }
+    .seance-card-filiere.locked { color: #2d3748; }
+    .seance-card-filiere b { color: #94a3b8; }
+
+    .time-badge {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: 0.72rem; font-weight: 700; color: #a78bfa;
+        background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2);
+        border-radius: 6px; padding: 2px 9px; margin-bottom: 0.8rem;
+    }
+
+    .seance-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+    .lock-msg { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; }
+    .lock-msg.not-yet   { color: #6366f1; }
+    .lock-msg.prev-lock { color: #f59e0b; }
+    .lock-msg.expired   { color: #475569; }
+    .lock-msg.done-msg  { color: #34d399; }
+    .lock-msg.week-lock { color: #374151; }
+
+    .btn-presence {
+        background: linear-gradient(135deg, #667eea, #764ba2); color: white;
+        padding: 0.55rem 1rem; border-radius: 9px; text-decoration: none;
+        font-weight: 700; font-size: 0.82rem; display: inline-flex; align-items: center;
+        gap: 6px; transition: all 0.2s ease; border: none;
+    }
+    .btn-presence:hover { filter: brightness(1.12); transform: translateY(-1px); color: white; text-decoration: none; }
+
+    .btn-historique {
+        background: rgba(16,185,129,0.12); color: #34d399;
+        padding: 0.55rem 1rem; border-radius: 9px; text-decoration: none;
+        font-weight: 700; font-size: 0.82rem; display: inline-flex; align-items: center;
+        gap: 6px; transition: all 0.2s ease; border: 1px solid rgba(52,211,153,0.35);
+    }
+    .btn-historique:hover { background: rgba(16,185,129,0.22); transform: translateY(-1px); color: #34d399; text-decoration: none; }
+
+    .no-planning-badge {
+        display: block; width: fit-content;
+        background: rgba(251,191,36,0.1); color: #fbbf24;
+        border: 1px solid rgba(251,191,36,0.25); border-radius: 8px;
+        padding: 0.35rem 0.8rem; font-size: 0.78rem; font-weight: 600; margin-bottom: 1rem;
+    }
+    .empty-state {
+        text-align: center; padding: 4rem 2rem;
+        background: rgba(30,41,59,0.4); border-radius: 16px;
+        border: 1px dashed rgba(99,102,241,0.3); color: #64748b;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row mb-5">
-    <div class="col-12">
-        <div class="glass-card">
-            <h2 class="mb-0">Bonjour, Professeur {{ professor.full_name }}</h2>
-            <p class="text-secondary">Sélectionnez une matière pour gérer la présence.</p>
-        </div>
-    </div>
-</div>
 
-<div class="row g-4">
+<div class="greeting-card">
+    <div>
+        <h2>👋 Bonjour, Professeur {{ professor_nom }} {{ professor_prenom }}</h2>
+        <p>Sélectionnez une séance pour gérer la présence.</p>
+        {% if today_full %}<span class="greeting-date">📅 {{ today_full }}</span>{% endif %}
+    </div>
     {% for course in courses %}
-    <div class="col-md-4">
-        <div class="glass-card h-100 d-flex flex-column">
-            <h4><i class="fa-solid fa-book-open me-2"></i>{{ course.name }}</h4>
-            <p class="text-muted">{{ course.filiere }}</p>
-
-            <div class="mt-auto">
-                <a href="{% url 'take_attendance' course.id %}" class="btn btn-premium w-100 mb-2">
-                    <i class="fa-solid fa-camera me-2"></i>Enregistrer la Présence
-                </a>
-                <a href="{% url 'absence_list' course.id %}" class="btn btn-outline-light w-100">
-                    <i class="fa-solid fa-list me-2"></i>Historique des Absences
-                </a>
-            </div>
-        </div>
-    </div>
-    {% empty %}
-    <div class="col-12">
-        <div class="alert alert-info glass-card text-center">
-            Aucune matière ne vous est assignée pour le moment.
-        </div>
-    </div>
+        {% if course.has_planning %}
+        <a href="{% url 'absence_total' course.id %}" class="btn-historique-total">
+            📊 Historique Total des Absences
+        </a>
+        {% endif %}
     {% endfor %}
 </div>
+
+{% if courses %}
+    {% for course in courses %}
+        {% if course.has_planning %}
+            {% for week in course.weeks %}
+
+                <div class="week-divider-line {{ week.status }}">
+                    SEMAINE {{ week.number }} ({{ week.date_debut }} – fin {{ week.date_fin }})
+                    {% if week.status == 'current' %}
+                        <span class="week-badge badge-current">✦ En cours</span>
+                    {% elif week.status == 'past' %}
+                        <span class="week-badge badge-past">✓ Terminée</span>
+                    {% else %}
+                        <span class="week-badge badge-future">🔒 À venir</span>
+                    {% endif %}
+                </div>
+
+                {% for seance in week.seances %}
+                    {% if week.status == 'current' %}
+
+                        {% if seance.unlocked %}
+                        <!-- ✅ OPEN -->
+                        <div class="seance-label active">Séance {{ seance.number }}</div>
+                        <div class="seance-card active">
+                            <div class="seance-card-title active">📚 {{ course.name }}</div>
+                            <div class="seance-card-filiere active">Filière : <b>{{ course.filiere }}</b></div>
+                            {% if seance.heure_debut and seance.heure_fin %}
+                            <div class="time-badge">🕐 {{ seance.heure_debut }} – {{ seance.heure_fin }}</div>
+                            {% endif %}
+                            <div class="seance-actions">
+                                <a href="{% url 'take_attendance' course.id %}?week={{ week.number }}&seance={{ seance.number }}" class="btn-presence">
+                                    📷 Prendre la Présence
+                                </a>
+                                <a href="{% url 'absence_list' course.id %}?week={{ week.number }}&seance={{ seance.number }}" class="btn-historique">
+                                    📋 Historique des Absences
+                                </a>
+                            </div>
+                        </div>
+
+                        {% elif seance.lock_reason == 'done' %}
+                        <!-- ✅ DONE — already recorded -->
+                        <div class="seance-label locked">Séance {{ seance.number }}</div>
+                        <div class="seance-card done">
+                            <div class="seance-card-title done">📚 {{ course.name }}</div>
+                            <div class="seance-card-filiere active">Filière : <b>{{ course.filiere }}</b></div>
+                            <div class="seance-actions">
+                                <span class="lock-msg done-msg">✅ Présence déjà enregistrée</span>
+                                <a href="{% url 'absence_list' course.id %}?week={{ week.number }}&seance={{ seance.number }}" class="btn-historique" style="pointer-events:auto; opacity:1;">
+                                    📋 Voir Historique
+                                </a>
+                            </div>
+                        </div>
+
+                        {% elif seance.lock_reason == 'prev_not_done' %}
+                        <!-- 🔒 WAITING — previous seance not finished yet -->
+                        <div class="seance-label locked">Séance {{ seance.number }}</div>
+                        <div class="seance-card locked">
+                            <div class="seance-card-title locked">📚 {{ course.name }}</div>
+                            <div class="seance-card-filiere locked">Filière : <b>{{ course.filiere }}</b></div>
+                            <div class="seance-actions">
+                                <span class="lock-msg prev-lock">
+                                    🔒 Attend la fin de la séance {{ seance.number|add:"-1" }}{% if seance.prev_heure_fin %} — se déverrouille à {{ seance.prev_heure_fin }}{% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                        {% elif seance.lock_reason == 'not_yet' %}
+                        <!-- 🕐 NOT YET — too early -->
+                        <div class="seance-label locked">Séance {{ seance.number }}</div>
+                        <div class="seance-card locked">
+                            <div class="seance-card-title locked">📚 {{ course.name }}</div>
+                            <div class="seance-card-filiere locked">Filière : <b>{{ course.filiere }}</b></div>
+                            <div class="seance-actions">
+                                <span class="lock-msg not-yet">🕐 Disponible à {{ seance.heure_debut }}</span>
+                            </div>
+                        </div>
+
+                        {% elif seance.lock_reason == 'expired' %}
+                        <!-- ⏰ EXPIRED -->
+                        <div class="seance-label locked">Séance {{ seance.number }}</div>
+                        <div class="seance-card locked">
+                            <div class="seance-card-title locked">📚 {{ course.name }}</div>
+                            <div class="seance-card-filiere locked">Filière : <b>{{ course.filiere }}</b></div>
+                            <div class="seance-actions">
+                                <span class="lock-msg expired">⏰ Séance terminée — {{ seance.heure_fin }}</span>
+                            </div>
+                        </div>
+
+                        {% else %}
+                        <!-- fallback open -->
+                        <div class="seance-label active">Séance {{ seance.number }}</div>
+                        <div class="seance-card active">
+                            <div class="seance-card-title active">📚 {{ course.name }}</div>
+                            <div class="seance-card-filiere active">Filière : <b>{{ course.filiere }}</b></div>
+                            <div class="seance-actions">
+                                <a href="{% url 'take_attendance' course.id %}?week={{ week.number }}&seance={{ seance.number }}" class="btn-presence">
+                                    📷 Prendre la Présence
+                                </a>
+                                <a href="{% url 'absence_list' course.id %}?week={{ week.number }}&seance={{ seance.number }}" class="btn-historique">
+                                    📋 Historique des Absences
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                    {% else %}
+                    <!-- PAST / FUTURE week -->
+                    <div class="seance-label locked">Séance {{ seance.number }}</div>
+                    <div class="seance-card locked">
+                        <div class="seance-card-title locked">📚 {{ course.name }}</div>
+                        <div class="seance-card-filiere locked">Filière : <b>{{ course.filiere }}</b></div>
+                        <div class="seance-actions">
+                            {% if week.status == 'future' %}
+                            <span class="lock-msg week-lock">🔒 Pas encore disponible</span>
+                            {% else %}
+                            <span class="lock-msg expired">🔒 Semaine terminée</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+
+            {% endfor %}
+
+        {% else %}
+        <div class="week-divider-line current">{{ course.name }} · Filière : {{ course.filiere }}</div>
+        <div class="seance-card active">
+            <div class="seance-card-title active">📚 {{ course.name }}</div>
+            <div class="seance-card-filiere active">Filière : <b>{{ course.filiere }}</b></div>
+            <div class="no-planning-badge">⚠️ Aucun planning défini par l'admin</div>
+            <div class="seance-actions">
+                <a href="{% url 'take_attendance' course.id %}" class="btn-presence">📷 Prendre la Présence</a>
+                <a href="{% url 'absence_list' course.id %}" class="btn-historique">📋 Historique des Absences</a>
+                <a href="{% url 'absence_total' course.id %}" class="btn-historique-total">📊 Historique Total</a>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+
+{% else %}
+<div class="empty-state">
+    <div style="font-size:2.5rem; margin-bottom:1rem;">📭</div>
+    <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.4rem;">Aucune matière assignée</h3>
+    <p style="font-size:0.85rem;">Contactez l'administrateur pour qu'il vous assigne des matières.</p>
+</div>
+{% endif %}
+
 {% endblock %}

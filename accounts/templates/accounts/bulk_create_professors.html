@@ -1,0 +1,621 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion Professeurs | Face Attendance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-blue: #3b82f6;
+            --glass: rgba(30,41,59,0.7);
+            --glass-border: rgba(255,255,255,0.1);
+            --text-main: #f1f5f9;
+            --text-dim: #94a3b8;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif; }
+        html, body { min-height:100vh; transition:background-color 0.4s ease, background 0.4s ease, color 0.3s ease; }
+        body {
+            height:100vh;
+            background:#0a0a0f;
+            display:flex; flex-direction:column;
+            color:var(--text-main);
+            overflow:hidden;
+            padding:1.5rem 2rem;
+        }
+
+        /* ── LIGHT THEME ── */
+        body.theme-light { color:#0f172a !important; background:#f8fafc !important; }
+        body.theme-light .editable-cell { color:#0f172a !important; }
+        body.theme-light .num-input,
+        body.theme-light .date-input { color:#0f172a !important; }
+        body.theme-light th { color:#334155 !important; background:rgba(226,232,240,0.95) !important; }
+        body.theme-light td { border-bottom-color:rgba(0,0,0,0.07); }
+        body.theme-light .btn-back { background:rgba(0,0,0,0.08); color:#0f172a; border-color:rgba(0,0,0,0.2); }
+        body.theme-light .table-card { background:rgba(255,255,255,0.92) !important; border-color:rgba(0,0,0,0.1) !important; box-shadow:0 4px 20px rgba(0,0,0,0.15); }
+        body.theme-light .col-group-planning th { background:rgba(99,102,241,0.12) !important; color:#4338ca !important; }
+        body.theme-light .col-group-identity th { background:rgba(59,130,246,0.1) !important; color:#2563eb !important; }
+        body.theme-light .col-planning { background:rgba(99,102,241,0.06) !important; }
+        body.theme-light td.td-planning { background:rgba(99,102,241,0.04) !important; }
+        body.theme-light #footerNote { color:#475569 !important; }
+        body.theme-light #subtitleText { color:#475569 !important; }
+        body.theme-light .date-input::-webkit-calendar-picker-indicator { filter:invert(0.3); }
+
+        header {
+            display:flex; justify-content:space-between; align-items:center;
+            margin-bottom:1.5rem; width:100%;
+        }
+        .btn-premium {
+            padding:0.55rem 1.3rem; border-radius:10px;
+            border:1px solid var(--glass-border); cursor:pointer;
+            font-weight:600; font-size:0.82rem;
+            transition:all 0.3s ease;
+            display:flex; align-items:center; gap:8px;
+            text-decoration:none; color:var(--text-main);
+        }
+        .btn-back { background:var(--glass); }
+        .btn-save { background:var(--accent-blue); border:none; color:white !important; }
+        .btn-premium:hover { transform:translateY(-2px); filter:brightness(1.1); }
+
+        .main-container { flex:1; display:flex; flex-direction:column; width:100%; }
+
+        .table-card {
+            background:var(--glass);
+            backdrop-filter:blur(16px);
+            border:1px solid var(--glass-border);
+            border-radius:16px; padding:0.5rem;
+            box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);
+            max-height:calc(100vh - 160px);
+            overflow-y:auto; overflow-x:hidden;
+            transition:background 0.4s ease, border-color 0.4s ease;
+            width:100%;
+            scrollbar-width:thin;
+            scrollbar-color:rgba(139,92,246,0.9) rgba(255,255,255,0.08);
+        }
+        .table-card::-webkit-scrollbar { width:10px; height:10px; }
+        .table-card::-webkit-scrollbar-track {
+            background:rgba(255,255,255,0.06);
+            border-radius:10px;
+        }
+        .table-card::-webkit-scrollbar-thumb {
+            background:linear-gradient(180deg,#8b5cf6,#3b82f6);
+            border-radius:10px;
+            border:2px solid transparent;
+            background-clip:padding-box;
+        }
+        .table-card::-webkit-scrollbar-thumb:hover {
+            background:linear-gradient(180deg,#a855f7,#2563eb);
+            background-clip:padding-box;
+        }
+
+        table {
+            width:100%;
+            border-collapse:collapse;
+            table-layout:fixed;
+        }
+
+        /* ── COLUMN WIDTHS — fits screen without scroll ── */
+        col.c-nom     { width:9%; }
+        col.c-prenom  { width:9%; }
+        col.c-email   { width:18%; }
+        col.c-filiere { width:9%; }
+        col.c-matiere { width:9%; }
+        col.c-sem     { width:6%; }
+        col.c-ddebut  { width:8%; }
+        col.c-dfin    { width:8%; }
+        col.c-seances { width:6%; }
+        col.c-del     { width:4%; }
+
+        .col-group-header th {
+            padding:0.4rem 0.3rem; font-size:0.62rem; font-weight:700;
+            text-transform:uppercase; letter-spacing:1px; text-align:center;
+            border-bottom:2px solid rgba(255,255,255,0.08);
+        }
+        .col-group-identity th { background:rgba(59,130,246,0.12); color:#60a5fa; }
+        .col-group-planning th { background:rgba(99,102,241,0.15); color:#a78bfa; }
+
+        th {
+            padding:0.6rem 0.4rem;
+            background:rgba(15,23,42,0.8);
+            font-weight:600; text-transform:uppercase;
+            font-size:0.62rem; letter-spacing:0.03em;
+            color:var(--text-dim);
+            position:sticky; top:0; z-index:10;
+            border-bottom:1px solid var(--glass-border);
+            white-space:nowrap; text-align:left;
+            overflow:hidden; text-overflow:ellipsis;
+            transition:background 0.4s ease, color 0.4s ease;
+        }
+        .col-planning { background:rgba(99,102,241,0.08) !important; }
+        td { border-bottom:1px solid rgba(255,255,255,0.05); vertical-align:middle; padding:0; }
+        td.td-planning { background:rgba(99,102,241,0.04); }
+
+        .editable-cell {
+            width:100%; height:40px; padding:0 0.4rem;
+            background:transparent; border:2px solid transparent;
+            color:var(--text-main); font-size:0.78rem;
+            outline:none; transition:all 0.2s ease;
+            display:flex; align-items:center;
+            overflow:hidden; white-space:nowrap;
+        }
+        .editable-cell:focus {
+            background:rgba(255,255,255,0.03);
+            border-color:rgba(59,130,246,0.5); border-radius:5px;
+        }
+        .invalid { border-bottom-color:var(--danger) !important; }
+
+        .date-input {
+            width:100%; height:40px; padding:0 0.3rem;
+            background:transparent; border:2px solid transparent;
+            color:var(--text-main); font-size:0.75rem;
+            font-family:'Inter',sans-serif; outline:none;
+            transition:all 0.2s ease; cursor:pointer;
+        }
+        .date-input:focus {
+            background:rgba(255,255,255,0.03);
+            border-color:rgba(167,139,250,0.5); border-radius:5px;
+        }
+        .date-input::-webkit-calendar-picker-indicator { filter:invert(0.6); cursor:pointer; transform:scale(0.85); }
+
+        .num-input {
+            width:100%; height:40px; padding:0 0.2rem;
+            background:transparent; border:2px solid transparent;
+            color:var(--text-main); font-size:0.78rem;
+            font-family:'Inter',sans-serif; font-weight:600;
+            text-align:center; outline:none; transition:all 0.2s ease;
+            -moz-appearance:textfield;
+        }
+        .num-input::-webkit-inner-spin-button,
+        .num-input::-webkit-outer-spin-button { -webkit-appearance:none; }
+        .num-input:focus {
+            background:rgba(255,255,255,0.03);
+            border-color:rgba(167,139,250,0.5); border-radius:5px;
+        }
+
+        /* ── ADD ROW ── */
+        .add-row-container {
+            display:flex; justify-content:center;
+            margin-top:0.8rem; margin-bottom:1rem;
+        }
+        .btn-add-row {
+            background:linear-gradient(135deg,#6366f1 0%,#a855f7 100%);
+            color:white; border:none; padding:9px 24px; border-radius:50px;
+            font-weight:600; font-size:0.85rem; cursor:pointer;
+            display:flex; align-items:center; gap:8px;
+            box-shadow:0 8px 16px -4px rgba(99,102,241,0.5);
+            transition:all 0.2s ease;
+        }
+        .btn-add-row:hover { transform:translateY(-2px); filter:brightness(1.1); }
+
+        /* ── DELETE ── */
+        .btn-del-prof {
+            width:28px; height:28px; border:none; border-radius:7px;
+            background:rgba(239,68,68,0.12); color:#ef4444;
+            cursor:pointer; display:flex; align-items:center; justify-content:center;
+            font-size:0.78rem; transition:all 0.2s ease; margin:auto;
+        }
+        .btn-del-prof:hover { background:rgba(239,68,68,0.3); transform:scale(1.1); }
+
+        .del-backdrop {
+            display:none; position:fixed; inset:0;
+            background:rgba(0,0,0,0.65); backdrop-filter:blur(6px);
+            z-index:9999; align-items:center; justify-content:center;
+        }
+        .del-backdrop.active { display:flex; }
+        .del-dialog {
+            background:linear-gradient(135deg,#1e2a42,#131d32);
+            border:1px solid rgba(239,68,68,0.35); border-radius:20px;
+            padding:32px 40px; text-align:center; max-width:380px; width:90%;
+            box-shadow:0 25px 60px rgba(0,0,0,0.6);
+            animation:fadeInScale .3s ease;
+        }
+        @keyframes fadeInScale { from{opacity:0;transform:scale(.88)} to{opacity:1;transform:scale(1)} }
+        .del-dialog .icon { font-size:2.2rem; margin-bottom:10px; display:block; }
+        .del-dialog h3 { color:#f1f5f9; font-size:0.95rem; margin-bottom:8px; }
+        .del-dialog p { color:#94a3b8; font-size:0.8rem; margin-bottom:22px; line-height:1.5; }
+        .del-dialog .actions { display:flex; gap:12px; justify-content:center; }
+        .btn-cancel-del {
+            padding:9px 22px; border-radius:9px;
+            border:1px solid rgba(255,255,255,.12);
+            background:rgba(255,255,255,.07); color:#f1f5f9;
+            cursor:pointer; font-weight:600; font-size:0.84rem; transition:.2s;
+        }
+        .btn-confirm-del {
+            padding:9px 22px; border-radius:9px; border:none;
+            background:linear-gradient(135deg,#dc2626,#ef4444); color:#fff;
+            cursor:pointer; font-weight:700; font-size:0.84rem;
+            box-shadow:0 4px 15px rgba(239,68,68,0.4); transition:.2s;
+        }
+        .btn-cancel-del:hover { background:rgba(255,255,255,.15); }
+        .btn-confirm-del:hover { filter:brightness(1.1); }
+
+        .prof-toast-wrap {
+            position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+            z-index:10000; pointer-events:none;
+            display:flex; flex-direction:column; gap:6px; align-items:center;
+        }
+        .prof-toast {
+            padding:11px 26px; border-radius:11px; font-weight:600; font-size:.84rem;
+            color:#fff; animation:toastUp .35s ease;
+            box-shadow:0 8px 30px rgba(0,0,0,.4); white-space:nowrap;
+        }
+        .prof-toast.success { background:rgba(5,150,105,.92); border:1px solid #10b981; }
+        .prof-toast.error   { background:rgba(220,38,38,.92);  border:1px solid #ef4444; }
+        @keyframes toastUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+        #notification {
+            position:fixed; bottom:30px; left:50%;
+            transform:translate(-50%,100px);
+            padding:0.85rem 2rem; border-radius:12px;
+            background:#1e293b; color:white; z-index:1000;
+            transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);
+            display:flex; align-items:center; gap:12px;
+            border:1px solid var(--glass-border);
+        }
+        #notification.show { transform:translate(-50%,0); }
+        .loader {
+            width:14px; height:14px;
+            border:2px solid rgba(255,255,255,0.1);
+            border-radius:50%; border-top-color:var(--accent-blue);
+            animation:spin 0.8s linear infinite;
+        }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        #debugBox {
+            position:fixed; top:20px; right:20px; z-index:99999;
+            background:rgba(220,38,38,0.9); color:white;
+            padding:10px 16px; border-radius:10px;
+            font-size:0.78rem; font-weight:600; max-width:360px; display:none;
+        }
+    </style>
+</head>
+<body>
+    <script>
+    (function(){
+        const bg = localStorage.getItem('adminThemeBg');
+        if(bg){
+            document.body.style.background = bg;
+            document.body.style.backgroundColor = bg;
+            document.documentElement.style.background = bg;
+            document.documentElement.style.backgroundColor = bg;
+            const isLight = bg==='#ffffff'||bg==='#f0f0f0'||bg==='#f8fafc';
+            if(isLight) document.body.classList.add('theme-light');
+        }
+    })();
+    </script>
+
+    <header>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:42px;height:42px;border-radius:50%;padding:2px;
+                background:linear-gradient(135deg,#8b5cf6,#3b82f6);
+                box-shadow:0 0 16px rgba(139,92,246,0.7);flex-shrink:0;">
+                <img src="{% static 'images/admin1.png' %}" alt="Admin"
+                    style="width:100%;height:100%;border-radius:50%;object-fit:contain;background:#0d0d1a;display:block;">
+            </div>
+            <div>
+                <div style="font-size:0.95rem;font-weight:800;
+                    background:linear-gradient(135deg,#fff 0%,#a78bfa 50%,#60a5fa 100%);
+                    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.2;">
+                    Tableau de Bord Admin
+                </div>
+                <div id="subtitleText" style="font-size:0.72rem;color:#64748b;font-weight:500;margin-top:2px;">
+                    Gestion des Professeurs
+                </div>
+            </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+            <a href="#" onclick="handleBack(event)" class="btn-premium btn-back">
+                <i class="fas fa-chevron-left"></i> Dashboard
+            </a>
+            <button onclick="handleSave()" class="btn-premium btn-save">
+                <i class="fas fa-check-circle"></i> Enregistrer
+            </button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="table-card">
+            <table id="profTable">
+                <colgroup>
+                    <col class="c-nom">
+                    <col class="c-prenom">
+                    <col class="c-email">
+                    <col class="c-filiere">
+                    <col class="c-matiere">
+                    <col class="c-sem">
+                    <col class="c-ddebut">
+                    <col class="c-dfin">
+                    <col class="c-seances">
+                    <col class="c-del">
+                </colgroup>
+                <thead>
+                    <tr class="col-group-header">
+                        <th colspan="5" class="col-group-identity" style="text-align:center;border-right:2px solid rgba(99,102,241,0.3);">
+                            👤 Informations du Professeur
+                        </th>
+                        <th colspan="4" class="col-group-planning" style="text-align:center;border-right:2px solid rgba(99,102,241,0.3);">
+                            📅 Planning & Séances
+                        </th>
+                        <th colspan="1"></th>
+                    </tr>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Prénom</th>
+                        <th>Email</th>
+                        <th>Filière</th>
+                        <th style="border-right:2px solid rgba(99,102,241,0.3);">Matière</th>
+                        <th class="col-planning">Semaines</th>
+                        <th class="col-planning">Dt Début</th>
+                        <th class="col-planning">Dt Fin</th>
+                        <th class="col-planning" style="border-right:2px solid rgba(99,102,241,0.3);">Séances</th>
+                        <th style="width:44px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="add-row-container">
+            <button type="button" class="btn-add-row" id="btnAddRow">
+                <i class="fas fa-plus-circle"></i> Ajouter une ligne
+            </button>
+        </div>
+
+        <p id="footerNote" style="margin-top:0.5rem;font-size:0.78rem;color:#94a3b8;text-align:center;">
+            <i class="fas fa-info-circle"></i> Les lignes vides seront ignorées. Les champs Planning sont optionnels.
+        </p>
+    </div>
+
+    <div class="del-backdrop" id="delBackdrop">
+        <div class="del-dialog">
+            <span class="icon">🗑️</span>
+            <h3 id="delTitle">Supprimer le professeur ?</h3>
+            <p id="delMessage">Cette action est irréversible.</p>
+            <div class="actions">
+                <button class="btn-cancel-del" id="delNo">Annuler</button>
+                <button class="btn-confirm-del" id="delYes">Supprimer</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="prof-toast-wrap" id="profToastWrap"></div>
+    <div id="debugBox"></div>
+    <div id="notification">
+        <div class="loader" id="spinner"></div>
+        <span id="notifMessage">Traitement en cours...</span>
+    </div>
+
+    <script>
+        const tableBody     = document.getElementById('tableBody');
+        const DASHBOARD_URL = "{% url 'admin_dashboard' %}";
+        const SAVE_URL      = "{% url 'bulk_save' %}";
+        const CSRF_TOKEN    = "{{ csrf_token }}";
+        const DELETE_BASE   = "/delete-professor/";
+
+        /* ── Theme ── */
+        function applyTheme(bg){
+            document.body.style.background = bg;
+            document.body.style.backgroundColor = bg;
+            document.documentElement.style.background = bg;
+            document.documentElement.style.backgroundColor = bg;
+            const isLight = ['#ffffff','#f0f0f0','#f8fafc'].includes(bg);
+            document.body.classList.toggle('theme-light', isLight);
+            document.querySelectorAll('th').forEach(th=>{
+                if(th.classList.contains('col-planning')){
+                    th.style.background = isLight?'rgba(99,102,241,0.1)':'rgba(99,102,241,0.08)';
+                    th.style.color = isLight?'#4338ca':'#a78bfa';
+                } else if(!th.closest('.col-group-header')){
+                    th.style.background = isLight?'rgba(226,232,240,0.95)':'rgba(15,23,42,0.8)';
+                    th.style.color = isLight?'#334155':'#94a3b8';
+                }
+            });
+            const card = document.querySelector('.table-card');
+            if(card){
+                card.style.background = isLight?'rgba(255,255,255,0.92)':'rgba(30,41,59,0.7)';
+                card.style.borderColor = isLight?'rgba(0,0,0,0.1)':'rgba(255,255,255,0.1)';
+            }
+            document.querySelectorAll('.editable-cell,.date-input,.num-input').forEach(el=>{
+                el.style.color = isLight?'#0f172a':'#f1f5f9';
+            });
+            const btnBack = document.querySelector('.btn-back');
+            if(btnBack){
+                btnBack.style.background = isLight?'rgba(0,0,0,0.07)':'rgba(30,41,59,0.7)';
+                btnBack.style.color = isLight?'#0f172a':'#f1f5f9';
+                btnBack.style.borderColor = isLight?'rgba(0,0,0,0.15)':'rgba(255,255,255,0.1)';
+            }
+            const note=document.getElementById('footerNote'); if(note) note.style.color=isLight?'#475569':'#94a3b8';
+            const sub=document.getElementById('subtitleText'); if(sub) sub.style.color=isLight?'#475569':'#64748b';
+        }
+        window.addEventListener('storage', e=>{ if(e.key==='adminThemeBg'&&e.newValue) applyTheme(e.newValue); });
+
+        /* ── Data from Django ── */
+        const EXISTING_PROFS = [
+            {% for prof in existing_professors %}
+            {
+                id:"{{ prof.id }}",
+                nom:"{{ prof.nom|escapejs }}",
+                prenom:"{{ prof.prenom|escapejs }}",
+                email:"{{ prof.email|escapejs }}",
+                filiere:"{{ prof.filiere|escapejs }}",
+                matiere:"{{ prof.matiere|escapejs }}",
+                nb_semaines:"{{ prof.nb_semaines|default:''|escapejs }}",
+                date_debut:"{{ prof.date_debut|default:''|escapejs }}",
+                date_fin:"{{ prof.date_fin|default:''|escapejs }}",
+                seances_semaine:"{{ prof.seances_semaine|default:''|escapejs }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        function lc(){ const bg=localStorage.getItem('adminThemeBg')||''; return ['#ffffff','#f0f0f0','#f8fafc'].includes(bg)?'#0f172a':'#f1f5f9'; }
+
+        function addRow(data=null){
+            const tr=document.createElement('tr');
+            const isEx=data&&data.id;
+            if(isEx) tr.id=`professor-row-${data.id}`;
+            const delBtn=isEx
+                ?`<button type="button" class="btn-del-prof"
+                    onclick="confirmDelete(${data.id},'${(data.nom+' '+data.prenom).replace(/'/g,"\\'")}')"
+                    title="Supprimer"><i class="fas fa-trash-alt"></i></button>`:'';
+            const c=lc();
+            const dd=data&&data.date_debut?String(data.date_debut).substring(0,10):'';
+            const df=data&&data.date_fin?String(data.date_fin).substring(0,10):'';
+
+            tr.innerHTML=`
+                <td><div contenteditable="true" class="editable-cell" data-col="nom"     style="color:${c}">${data?data.nom:''}</div></td>
+                <td><div contenteditable="true" class="editable-cell" data-col="prenom"  style="color:${c}">${data?data.prenom:''}</div></td>
+                <td><div contenteditable="true" class="editable-cell" data-col="email"   style="color:${c}">${data?data.email:''}</div></td>
+                <td><div contenteditable="true" class="editable-cell" data-col="filiere" style="color:${c}">${data?data.filiere:''}</div></td>
+                <td style="border-right:2px solid rgba(99,102,241,0.2);">
+                    <div contenteditable="true" class="editable-cell" data-col="matiere" style="color:${c}">${data?data.matiere:''}</div>
+                </td>
+                <td class="td-planning">
+                    <input type="number" class="num-input" data-col="nb_semaines" min="1" max="52" placeholder="—"
+                        value="${data&&data.nb_semaines?data.nb_semaines:''}" style="color:${c}">
+                </td>
+                <td class="td-planning">
+                    <input type="date" class="date-input" data-col="date_debut" value="${dd}" style="color:${c}">
+                </td>
+                <td class="td-planning">
+                    <input type="date" class="date-input" data-col="date_fin" value="${df}" style="color:${c}">
+                </td>
+                <td class="td-planning" style="border-right:2px solid rgba(99,102,241,0.2);">
+                    <input type="number" class="num-input" data-col="seances_semaine" min="1" max="20" placeholder="—"
+                        value="${data&&data.seances_semaine?data.seances_semaine:''}" style="color:${c}">
+                </td>
+                <td style="text-align:center;vertical-align:middle;">${delBtn}</td>
+            `;
+            tr.querySelectorAll('.editable-cell').forEach(cell=>{
+                cell.addEventListener('input',()=>{
+                    onCellInput(cell);
+                    if(Array.from(tableBody.children).indexOf(tr)===tableBody.children.length-1&&cell.innerText.trim())
+                        for(let i=0;i<3;i++) addRow();
+                });
+            });
+            tableBody.appendChild(tr);
+        }
+
+        function onCellInput(cell){
+            const val=cell.innerText.trim(),col=cell.dataset.col;
+            if(!val){cell.classList.remove('invalid');return;}
+            if(col==='email'){
+                const ok=val.toLowerCase().endsWith('@usmba.ac.ma');
+                cell.classList.toggle('invalid',!ok);
+                if(ok) cell.style.borderBottomColor='var(--success)';
+            } else { cell.style.borderBottomColor='rgba(255,255,255,0.15)'; }
+        }
+
+        function handleBack(e){e.preventDefault();window.location.href=DASHBOARD_URL;}
+
+        function getRowData(row,idx){
+            const cells=row.querySelectorAll('.editable-cell');
+            const t=col=>row.querySelector(`[data-col="${col}"]`)?.value?.trim()||'';
+            return {
+                nom:cells[0]?.textContent.trim()||'',
+                prenom:cells[1]?.textContent.trim()||'',
+                email:cells[2]?.textContent.trim()||'',
+                filiere:cells[3]?.textContent.trim()||'',
+                matiere:cells[4]?.textContent.trim()||'',
+                lineNumber:idx+1,
+                nb_semaines:t('nb_semaines'),
+                date_debut:t('date_debut'),
+                date_fin:t('date_fin'),
+                seances_semaine:t('seances_semaine'),
+            };
+        }
+
+        async function handleSave(){
+            const data=[];let hasError=false;
+            Array.from(tableBody.children).forEach((row,i)=>{
+                if(hasError) return;
+                const rd=getRowData(row,i);
+                if(!rd.nom&&!rd.prenom&&!rd.email&&!rd.filiere&&!rd.matiere) return;
+                if(!rd.nom||!rd.prenom||!rd.email||!rd.filiere||!rd.matiere){
+                    alert(`Ligne ${rd.lineNumber}: Tous les champs d'identité sont obligatoires.`);
+                    hasError=true;return;
+                }
+                if(!rd.email.toLowerCase().endsWith('@usmba.ac.ma')){
+                    alert(`Ligne ${rd.lineNumber}: Email invalide.`);hasError=true;return;
+                }
+                data.push(rd);
+            });
+            if(hasError||!data.length){if(!hasError)alert("Aucune donnée à enregistrer.");return;}
+            showNotif("Enregistrement en cours...",true);
+            try{
+                const res=await fetch(SAVE_URL,{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','X-CSRFToken':CSRF_TOKEN},
+                    body:JSON.stringify({professeurs:data})
+                });
+                const result=await res.json();
+                if(result.success){
+                    let msg=`${result.created_count} Professeur(s) enregistré(s) !`;
+                    if(result.errors?.length){msg+=` (${result.errors.length} erreur(s))`;alert("Erreurs :\n"+result.errors.join('\n'));}
+                    showNotif(msg,false);
+                    setTimeout(()=>{location.href=DASHBOARD_URL;},1800);
+                } else {showNotif("Échec",false);alert("Erreur: "+result.error);}
+            }catch(err){showNotif("Erreur réseau",false);}
+        }
+
+        function confirmDelete(profId,profName){
+            document.getElementById('delTitle').textContent=`Supprimer ${profName} ?`;
+            document.getElementById('delMessage').textContent=`Cette action supprimera aussi ses cours et séances.`;
+            document.getElementById('delBackdrop').classList.add('active');
+            const yes=document.getElementById('delYes'),no=document.getElementById('delNo');
+            function cleanup(){
+                document.getElementById('delBackdrop').classList.remove('active');
+                yes.replaceWith(yes.cloneNode(true));no.replaceWith(no.cloneNode(true));
+            }
+            document.getElementById('delYes').addEventListener('click',async()=>{cleanup();await doDelete(profId);},{once:true});
+            document.getElementById('delNo').addEventListener('click',cleanup,{once:true});
+        }
+
+        async function doDelete(profId){
+            showProfToast('Suppression en cours…','success');
+            try{
+                const res=await fetch(`${DELETE_BASE}${profId}/`,{
+                    method:'POST',
+                    headers:{'X-CSRFToken':CSRF_TOKEN,'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}
+                });
+                const text=await res.text();let data;
+                try{data=JSON.parse(text);}
+                catch{showDebug(`HTTP ${res.status}\n${text.substring(0,300)}`);showProfToast('Erreur serveur','error');return;}
+                if(data.success){
+                    const row=document.getElementById(`professor-row-${profId}`);
+                    if(row){row.style.transition='opacity .35s,transform .35s';row.style.opacity='0';row.style.transform='translateX(40px)';setTimeout(()=>row.remove(),370);}
+                    showProfToast(`✅ ${data.message||'Professeur supprimé'}`,'success');
+                } else {showProfToast(data.error||'Erreur','error');}
+            }catch(err){showProfToast('Erreur réseau: '+err.message,'error');}
+        }
+
+        function showProfToast(msg,type='success'){
+            const wrap=document.getElementById('profToastWrap');
+            const t=document.createElement('div');t.className=`prof-toast ${type}`;t.textContent=msg;
+            wrap.appendChild(t);setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),350);},3500);
+        }
+        function showDebug(msg){const b=document.getElementById('debugBox');b.textContent=msg;b.style.display='block';setTimeout(()=>b.style.display='none',8000);}
+        function showNotif(msg,loading){
+            const n=document.getElementById('notification');
+            document.getElementById('notifMessage').innerText=msg;
+            document.getElementById('spinner').style.display=loading?'block':'none';
+            n.classList.add('show');if(!loading)setTimeout(()=>n.classList.remove('show'),3000);
+        }
+
+        function initTable(){
+            EXISTING_PROFS.forEach(p=>addRow(p));
+            for(let i=0;i<10;i++) addRow();
+        }
+
+        window.onload=()=>{
+            const bg=localStorage.getItem('adminThemeBg');
+            if(bg) applyTheme(bg);
+            initTable();
+            document.getElementById('btnAddRow').addEventListener('click',()=>{
+                addRow();document.querySelector('.table-card').scrollTop=99999;
+            });
+        };
+    </script>
+</body>
+</html>

@@ -1,188 +1,377 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load dict_extras %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/absence_list.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 20, 40, 0.98));
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        border-radius: 16px;
+        padding: 1.6rem 2rem;
+        margin-bottom: 1.8rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #6366f1, #8b5cf6, #3b82f6);
+    }
+
+    .page-header h2 {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #f1f5f9;
+        margin: 0 0 0.3rem 0;
+    }
+
+    .page-header p {
+        color: #64748b;
+        font-size: 0.85rem;
+        margin: 0;
+    }
+
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        margin-bottom: 1.6rem;
+    }
+
+    .stat-card {
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+    }
+
+    .stat-num {
+        font-size: 1.5rem;
+        font-weight: 800;
+    }
+
+    .stat-lbl {
+        font-size: 0.7rem;
+        color: #64748b;
+        margin-top: 3px;
+    }
+
+    .c-purple {
+        color: #a78bfa;
+    }
+
+    .c-red {
+        color: #f87171;
+    }
+
+    .c-blue {
+        color: #60a5fa;
+    }
+
+    .c-green {
+        color: #34d399;
+    }
+
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #94a3b8;
+        padding: 7px 16px;
+        border-radius: 9px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.82rem;
+        transition: .2s;
+        margin-bottom: 1.4rem;
+    }
+
+    .btn-back:hover {
+        background: rgba(255, 255, 255, 0.12);
+        color: #e2e8f0;
+        text-decoration: none;
+    }
+
+    /* ── EXCEL TABLE ── */
+    .table-wrapper {
+        background: rgba(20, 27, 48, 0.95);
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        border-radius: 14px;
+        overflow: hidden;
+    }
+
+    .table-scroll {
+        overflow-x: auto;
+    }
+
+    .table-scroll::-webkit-scrollbar {
+        height: 5px;
+    }
+
+    .table-scroll::-webkit-scrollbar-thumb {
+        background: rgba(139, 92, 246, 0.4);
+        border-radius: 3px;
+    }
+
+    table.xt {
+        border-collapse: collapse;
+        font-size: 0.76rem;
+        min-width: 500px;
+        width: 100%;
+    }
+
+    /* All cells base */
+    .xt th,
+    .xt td {
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        text-align: center;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    /* ── HEADER ROW 1: title + week spans ── */
+    .xt .tr-title th {
+        padding: 7px 10px;
+        font-weight: 800;
+    }
+
+    .xt .tr-title .th-course {
+        background: rgba(59, 130, 246, 0.15);
+        color: #93c5fd;
+        font-size: 0.8rem;
+        text-align: center;
+        border-right: 2px solid rgba(99, 102, 241, 0.4);
+    }
+
+    .xt .tr-title .th-week {
+        background: rgba(59, 130, 246, 0.12);
+        color: #93c5fd;
+        font-size: 0.75rem;
+        border-left: 2px solid rgba(99, 102, 241, 0.35);
+    }
+
+    /* ── HEADER ROW 2: @, Nom, Prénom + séance checkboxes ── */
+    .xt .tr-cols th {
+        padding: 5px 8px;
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+
+    .xt .tr-cols .th-at {
+        background: rgba(30, 41, 59, 0.9);
+        color: #64748b;
+        width: 28px;
+    }
+
+    .xt .tr-cols .th-nom {
+        background: rgba(30, 41, 59, 0.9);
+        color: #94a3b8;
+        text-align: left;
+        padding-left: 10px;
+        min-width: 100px;
+    }
+
+    .xt .tr-cols .th-prenom {
+        background: rgba(30, 41, 59, 0.9);
+        color: #94a3b8;
+        text-align: left;
+        padding-left: 8px;
+        min-width: 100px;
+    }
+
+    .xt .tr-cols .th-total {
+        background: rgba(30, 41, 59, 0.9);
+        color: #64748b;
+    }
+
+    .xt .tr-cols .th-seance {
+        background: rgba(30, 41, 59, 0.85);
+        color: #64748b;
+        width: 32px;
+        font-size: 0.65rem;
+    }
+
+    .xt .tr-cols .th-seance.sem-first {
+        border-left: 2px solid rgba(99, 102, 241, 0.35);
+    }
+
+    /* ── BODY ROWS ── */
+    .xt tbody tr {
+        transition: .12s;
+    }
+
+    .xt tbody tr:hover {
+        background: rgba(99, 102, 241, 0.06);
+    }
+
+    .xt tbody td {
+        padding: 5px 6px;
+    }
+
+    .xt tbody .td-num {
+        color: #475569;
+        font-size: 0.7rem;
+        width: 28px;
+        background: rgba(15, 23, 42, 0.6);
+    }
+
+    .xt tbody .td-nom {
+        text-align: left;
+        padding-left: 10px;
+        color: #e2e8f0;
+        font-weight: 600;
+        min-width: 100px;
+        background: rgba(15, 23, 42, 0.4);
+    }
+
+    .xt tbody .td-prenom {
+        text-align: left;
+        padding-left: 8px;
+        color: #cbd5e1;
+        min-width: 100px;
+        background: rgba(15, 23, 42, 0.4);
+    }
+
+    .xt tbody .td-total {
+        font-weight: 800;
+        font-size: 0.8rem;
+        background: rgba(15, 23, 42, 0.6);
+    }
+
+    .xt tbody .td-seance {
+        width: 32px;
+        background: rgba(15, 23, 42, 0.3);
+    }
+
+    .xt tbody .td-seance.sem-first {
+        border-left: 2px solid rgba(99, 102, 241, 0.3);
+    }
+
+    /* Checkbox cell — exactly like Excel */
+    .chk-box {
+        width: 18px;
+        height: 18px;
+        border-radius: 3px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: auto;
+    }
+
+    .chk-absent {
+        background: #3b82f6;
+        border: 1.5px solid #2563eb;
+    }
+
+    .chk-absent::after {
+        content: '✓';
+        color: white;
+        font-size: 0.65rem;
+        font-weight: 900;
+    }
+
+    .chk-present {
+        background: rgba(255, 255, 255, 0.07);
+        border: 1.5px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* total colors */
+    .tot-0 {
+        color: #34d399;
+    }
+
+    .tot-few {
+        color: #fbbf24;
+    }
+
+    .tot-many {
+        color: #f87171;
+    }
+
+    .empty-grid {
+        text-align: center;
+        padding: 3rem;
+        color: #64748b;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="absence-dashboard">
-    <!-- Header & Filter -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="glass-card d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <div>
-                    <h3 class="mb-0">{{ course.name }} : Absences</h3>
-                    {% if mode == 'weekly_active_days' %}
-                    <p class="text-secondary mb-0">Suivi des présences - Cette semaine</p>
-                    {% else %}
-                    <p class="text-secondary mb-0">Rapport du {{ selected_date|date:"d F Y" }}</p>
-                    {% endif %}
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <a href="{% url 'professor_dashboard' %}" class="btn btn-outline-secondary">
-                        <i class="fa-solid fa-arrow-left me-1"></i> Retour
-                    </a>
-                    <form class="filter-bar" method="GET">
-                        <input type="date" name="date" class="form-control filter-input"
-                            value="{{ selected_date|date:'Y-m-d' }}">
-                        <button type="submit" class="btn btn-premium px-4">Filtrer</button>
-                        {% if mode == 'daily' %}
-                        <a href="{% url 'absence_list' course.id %}" class="btn btn-outline-light">Global Semaine</a>
-                        {% endif %}
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    {% if mode == 'weekly_active_days' %}
-    <!-- WEEKLY SUMMARY MODE -->
-    <div class="stats-grid mb-4">
-        <div class="stat-card">
-            <div class="stat-icon bg-primary-subtle text-primary">
-                <i class="fa-solid fa-calendar-check"></i>
-            </div>
-            <div class="stat-info">
-                <span class="stat-value">{{ active_days|length }}</span>
-                <span class="stat-label">Jours de session</span>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon bg-danger-subtle text-danger">
-                <i class="fa-solid fa-user-slash"></i>
-            </div>
-            <div class="stat-info">
-                <span class="stat-value">{{ total_absences }}</span>
-                <span class="stat-label">Total Absences (Semaine)</span>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon bg-info-subtle text-info">
-                <i class="fa-solid fa-chart-pie"></i>
-            </div>
-            <div class="stat-info">
-                <span class="stat-value">{{ weekly_absence_rate }}%</span>
-                <span class="stat-label">Taux d'absence</span>
-            </div>
-        </div>
-    </div>
+<a href="{% url 'professor_dashboard' %}" class="btn-back">← Retour au tableau de bord</a>
 
-    <div class="glass-card">
-        <h5 class="mb-4"><i class="fa-solid fa-table-list text-primary me-2"></i> Tableau de Suivi Hebdomadaire</h5>
-        {% if active_days %}
-        <div class="table-responsive">
-            <table class="table table-dark table-hover table-compact bg-transparent mb-0">
-                <thead>
-                    <tr>
-                        <th class="ps-4">Étudiant</th>
-                        {% for day in active_days %}
-                        <th class="text-center">{{ day|date:"d/m" }}</th>
-                        {% endfor %}
-                        <th class="text-center text-danger">Total Abs.</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in students_rows %}
-                    <tr>
-                        <td class="ps-4 fw-medium text-white-50">{{ row.student.full_name }}</td>
-                        {% for status_obj in row.status_list %}
-                        <td class="text-center">
-                            {% if status_obj.status == 'Présent' %}
-                            <span class="badge rounded-pill bg-success-subtle text-success small">P</span>
-                            {% else %}
-                            <span class="badge rounded-pill bg-danger-subtle text-danger small">A</span>
-                            {% endif %}
-                        </td>
-                        {% endfor %}
-                        <td class="text-center fw-bold text-danger">{{ row.total_absences }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="text-center py-5">
-            <i class="fa-regular fa-calendar-xmark fa-3x text-muted mb-3"></i>
-            <p class="text-muted mb-0">Aucune session caméra enregistrée cette semaine.</p>
-        </div>
-        {% endif %}
-    </div>
-
-    {% else %}
-    <!-- DAILY VIEW MODE -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon bg-danger-subtle text-danger">
-                <i class="fa-solid fa-user-slash"></i>
-            </div>
-            <div class="stat-info">
-                <span class="stat-value">{{ total_absences }}</span>
-                <span class="stat-label">Total Absences</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- Sessions List -->
-        <div class="col-12">
-            {% for session in sessions %}
-            <div class="glass-card mb-4">
-                <div class="session-header">
-                    <h5 class="mb-0 d-flex align-items-center">
-                        <i class="fa-solid fa-clock text-primary me-2"></i>
-                        Séance de {{ session.start_time_str }} à {{ session.end_time_str }}
-                    </h5>
-                    <div class="session-meta">
-                        <span class="badge bg-secondary rounded-pill">{{ session.duration }}h</span>
-                        <span class="text-danger fw-bold small">
-                            {{ session.absent_count }} Absents / {{ session.total_count }} Total
-                        </span>
-                    </div>
-                </div>
-
-                <div class="table-responsive">
-                    <table class="table table-dark table-hover table-compact bg-transparent mb-0">
-                        <thead>
-                            <tr>
-                                <th>Étudiant</th>
-                                <th class="text-end">Statut</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for record in session.records.all %}
-                            <tr>
-                                <td class="fw-medium text-white-50">{{ record.student.full_name }}</td>
-                                <td class="text-end">
-                                    {% if record.status == 'present' %}
-                                    <span class="badge-status badge-present">
-                                        <i class="fa-solid fa-circle-check"></i> Présent
-                                    </span>
-                                    {% else %}
-                                    <span class="badge-status badge-absent">
-                                        <i class="fa-solid fa-circle-xmark"></i> Absent
-                                    </span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="2" class="text-center text-muted py-4">Aucun enregistrement pour cette
-                                    séance.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            {% empty %}
-            <div class="glass-card text-center py-5">
-                <i class="fa-regular fa-calendar-xmark fa-3x text-muted mb-3"></i>
-                <p class="text-muted mb-0">Aucune session trouvée pour cette date.</p>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
+<div class="page-header">
+    <h2>Historique des Absences — Séance {{ seance }}</h2>
+    <p>{{ course.name }} · Filière : <strong style="color:#94a3b8">{{ course.filiere }}</strong>{% if week %} · Semaine
+        {{ week }}{% endif %}</p>
 </div>
+
+<div class="stats-row">
+    <div class="stat-card">
+        <div class="stat-num c-blue">{{ total_students }}</div>
+        <div class="stat-lbl">Étudiants</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-num c-green">{{ present_count }}</div>
+        <div class="stat-lbl">Présents</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-num c-red">{{ absent_count }}</div>
+        <div class="stat-lbl">Absents</div>
+    </div>
+</div>
+
+{% if students_data %}
+<div class="table-wrapper">
+    <div class="table-scroll">
+        <table class="xt">
+            <thead>
+                <tr class="tr-cols">
+                    <th class="th-at">@</th>
+                    <th class="th-nom" colspan="2">Nom complet</th>
+                    <th class="th-total">Statut</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students_data %}
+                <tr>
+                    <td class="td-num">{{ forloop.counter }}</td>
+                    <td class="td-nom" colspan="2">{{ student.name }}</td>
+                    <td class="td-total">
+                        {% if student.is_absent %}
+                        <span
+                            style="display:inline-flex;align-items:center;gap:5px;background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:3px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;">✗
+                            Absent</span>
+                        {% else %}
+                        <span
+                            style="display:inline-flex;align-items:center;gap:5px;background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(52,211,153,0.3);padding:3px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;">✓
+                            Présent</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+<div class="table-wrapper">
+    <div class="empty-grid">📭 Aucun étudiant trouvé dans la filière <strong>{{ course.filiere }}</strong>.</div>
+</div>
+{% endif %}
+
 {% endblock %}

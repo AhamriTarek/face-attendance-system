@@ -10,6 +10,24 @@ SECRET_KEY = config('SECRET_KEY', default='unsafe-secret-key')
 DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
+# Feature flag: live face recognition / webcam capture.
+# Default False (cloud mode) so the app boots on a server with no webcam and
+# without the heavy dlib/opencv/face_recognition libraries installed.
+# Set FACE_RECOGNITION_ENABLED=True in local .env to enable full functionality.
+FACE_RECOGNITION_ENABLED = config('FACE_RECOGNITION_ENABLED', default=False, cast=bool)
+
+# Comma-separated list of trusted origins for CSRF (needed for HTTPS POST forms
+# behind the Railway domain, e.g. https://your-app.up.railway.app). Empty locally.
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='',
+    cast=lambda v: [s.strip() for s in v.split(',') if s.strip()],
+)
+
+# Behind Railway's HTTPS proxy, trust the forwarded-proto header (prod only).
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -31,6 +49,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -104,9 +123,33 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# WhiteNoise: compress + serve static files (incl. the homepage video) in production.
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        # Compresses static files (incl. the homepage video) and serves them
+        # via WhiteNoise. Non-manifest variant: single-pass and robust across
+        # platforms (the manifest variant multi-pass rewrite hit Windows file
+        # locks locally).
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+}
+
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Authentication
+LOGIN_URL = '/accueil/'
+LOGIN_REDIRECT_URL = '/accueil/'
+LOGOUT_REDIRECT_URL = '/accueil/'
+
+# Session Security
+SESSION_COOKIE_AGE = 3600              # 1 hour
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True # Session ends when browser closes
+SESSION_SAVE_EVERY_REQUEST = True      # Refresh session on every request
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -116,4 +159,21 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny', # We'll handle custom auth mostly or restrict manually
     ]
+}
+
+# Google OAuth
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
+GOOGLE_CLIENT_SECRET = config('GOOGLE_CLIENT_SECRET', default='')
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+            'hd': 'usmba.ac.ma' # Ensure only university emails can be used
+        }
+    }
 }

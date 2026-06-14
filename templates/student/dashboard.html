@@ -1,62 +1,409 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: #020408; min-height: 100vh; }
+
+/* ── 3D BACKGROUND ── */
+.bg-orbs {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0; overflow: hidden;
+}
+
+/* Deep grid perspective */
+.bg-orbs::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+        linear-gradient(rgba(99,102,241,0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,102,241,0.07) 1px, transparent 1px);
+    background-size: 60px 60px;
+    transform: perspective(800px) rotateX(60deg) scaleX(1.5) translateY(-20%);
+    transform-origin: 50% 0%;
+    mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 30%, rgba(0,0,0,0.3) 70%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 30%, rgba(0,0,0,0.3) 70%, transparent 100%);
+}
+
+/* Gradient mesh */
+.bg-orbs::after {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+        radial-gradient(ellipse 80% 50% at 20% 20%, rgba(99,102,241,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 70%, rgba(139,92,246,0.1) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 50% 100%, rgba(59,130,246,0.08) 0%, transparent 60%);
+}
+
+.orb {
+    position: absolute; border-radius: 50%;
+    filter: blur(100px); animation: orbFloat 15s ease-in-out infinite;
+}
+.orb-1 { width: 700px; height: 500px; background: radial-gradient(circle, rgba(79,70,229,0.18), transparent); top: -150px; left: -150px; animation-delay: 0s; }
+.orb-2 { width: 500px; height: 400px; background: radial-gradient(circle, rgba(124,58,237,0.14), transparent); top: 30%; right: -100px; animation-delay: -5s; }
+.orb-3 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(37,99,235,0.1), transparent); bottom: -50px; left: 25%; animation-delay: -10s; }
+
+/* Scanline overlay for depth */
+.bg-scan {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+}
+
+@keyframes orbFloat {
+    0%,100% { transform: translate(0,0) scale(1); }
+    33%  { transform: translate(40px,-50px) scale(1.06); }
+    66%  { transform: translate(-25px,25px) scale(0.94); }
+}
+
+/* ── PAGE WRAPPER ── */
+.dash-wrapper {
+    position: relative; z-index: 1;
+    max-width: 1100px; margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+/* ── HERO CARD ── */
+.hero-card {
+    position: relative; overflow: hidden;
+    background: linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(15,20,40,0.9) 50%, rgba(139,92,246,0.1) 100%);
+    border: 1px solid rgba(99,102,241,0.3);
+    border-radius: 28px; padding: 2.5rem 2.5rem;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(20px);
+    animation: slideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.hero-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(139,92,246,0.8), rgba(99,102,241,0.8), transparent);
+}
+.hero-card::after {
+    content: ''; position: absolute;
+    top: -50%; right: -10%; width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(99,102,241,0.15), transparent 70%);
+    border-radius: 50%; pointer-events: none;
+}
+.hero-eyebrow {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.15em;
+    color: #6366f1; text-transform: uppercase; margin-bottom: 0.6rem;
+    display: flex; align-items: center; gap: 8px;
+}
+.hero-eyebrow::before {
+    content: ''; width: 20px; height: 2px; background: #6366f1; border-radius: 2px;
+}
+.hero-name {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 800; color: #f8fafc; line-height: 1.1;
+    margin-bottom: 0.4rem;
+    background: linear-gradient(135deg, #f8fafc 40%, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.hero-sub { font-size: 0.88rem; color: #64748b; font-weight: 400; }
+.hero-filiere {
+    position: absolute; top: 2rem; right: 2.5rem;
+    font-family: 'Syne', sans-serif; font-size: 0.75rem; font-weight: 700;
+    letter-spacing: 0.1em; color: #a78bfa;
+    background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.25);
+    border-radius: 100px; padding: 6px 16px;
+}
+
+/* ── ALERT BANNER ── */
+.alert-banner {
+    border-radius: 18px; padding: 1.1rem 1.5rem; margin-bottom: 1.8rem;
+    display: flex; align-items: center; gap: 14px;
+    animation: slideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+    position: relative; overflow: hidden;
+}
+.alert-banner::before {
+    content: ''; position: absolute; inset: 0;
+    background: inherit; opacity: 0.5; filter: blur(20px); z-index: -1;
+}
+.alert-1 { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.3); }
+.alert-2 { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.3); }
+.alert-3 { background: rgba(239,68,68,0.08);  border: 1px solid rgba(239,68,68,0.3);  }
+.alert-icon-wrap {
+    width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+}
+.alert-1 .alert-icon-wrap { background: rgba(251,191,36,0.15); }
+.alert-2 .alert-icon-wrap { background: rgba(249,115,22,0.15); }
+.alert-3 .alert-icon-wrap { background: rgba(239,68,68,0.15); }
+.alert-title { font-family: 'Syne', sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; margin-bottom: 3px; }
+.alert-1 .alert-title, .alert-1 .alert-msg { color: #fbbf24; }
+.alert-2 .alert-title, .alert-2 .alert-msg { color: #fb923c; }
+.alert-3 .alert-title, .alert-3 .alert-msg { color: #f87171; }
+.alert-msg { font-size: 0.9rem; font-weight: 600; }
+
+/* ── STATS GRID ── */
+.stats-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 14px; margin-bottom: 2rem;
+}
+.stat-card {
+    background: rgba(15,20,40,0.7); backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 22px; padding: 1.5rem 1.2rem;
+    text-align: center; cursor: default;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.3s, box-shadow 0.3s;
+    animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    position: relative; overflow: hidden;
+}
+.stat-card:nth-child(1) { animation-delay: 0.15s; }
+.stat-card:nth-child(2) { animation-delay: 0.25s; }
+.stat-card:nth-child(3) { animation-delay: 0.35s; }
+.stat-card::before {
+    content: ''; position: absolute; inset: 0; border-radius: 22px;
+    opacity: 0; transition: opacity 0.3s;
+    background: radial-gradient(circle at 50% 0%, rgba(139,92,246,0.15), transparent 70%);
+}
+.stat-card:hover { transform: translateY(-8px) scale(1.02); }
+.stat-card:hover::before { opacity: 1; }
+.stat-card:hover { border-color: rgba(99,102,241,0.35); box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(99,102,241,0.15); }
+
+.stat-icon { display: none; }
+
+.stat-num {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 2.2rem; font-weight: 700; line-height: 1;
+    margin-bottom: 0.4rem; letter-spacing: -0.01em;
+}
+.stat-num .unit { font-size: 2.2rem; font-weight: 700; }
+.c-red   { color: #f87171; }
+.c-green { color: #34d399; }
+.c-blue  { color: #60a5fa; }
+
+.stat-lbl { font-size: 0.72rem; color: #64748b; font-weight: 400; margin-top: 4px; }
+
+/* ── TABLE SECTION ── */
+.table-section {
+    background: rgba(10,14,30,0.8); backdrop-filter: blur(20px);
+    border: 1px solid rgba(99,102,241,0.2);
+    border-radius: 24px; overflow: hidden;
+    animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
+}
+.table-topbar {
+    padding: 1.2rem 1.5rem;
+    background: rgba(15,20,40,0.6);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex; align-items: center; justify-content: space-between;
+}
+.table-title {
+    font-family: 'Syne', sans-serif; font-size: 0.85rem; font-weight: 700;
+    color: #f1f5f9; display: flex; align-items: center; gap: 10px;
+}
+.table-title-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #6366f1;
+    box-shadow: 0 0 8px #6366f1; animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.3)} }
+
+.table-scroll { overflow-x: auto; }
+.table-scroll::-webkit-scrollbar { height: 3px; }
+.table-scroll::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.4); border-radius: 3px; }
+
+table.xt {
+    border-collapse: collapse; width: 100%;
+    min-width: 500px; font-size: 0.8rem;
+}
+.xt th, .xt td {
+    border: 1px solid rgba(255,255,255,0.05);
+    text-align: center; vertical-align: middle;
+    white-space: nowrap; padding: 10px 12px;
+}
+
+/* Row 1 — group headers */
+.tr-title th { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.72rem; }
+.th-info {
+    background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(99,102,241,0.08));
+    color: #93c5fd; letter-spacing: 0.08em; text-transform: uppercase;
+    border-right: 2px solid rgba(99,102,241,0.3);
+}
+.th-total-head { background: rgba(239,68,68,0.1); color: #f87171; }
+.th-matieres {
+    background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08));
+    color: #a78bfa; border-left: 1px solid rgba(99,102,241,0.2);
+}
+.th-alerte-head { background: rgba(251,191,36,0.08); color: #fbbf24; min-width: 120px; }
+
+/* Row 2 — col labels */
+.tr-cols th {
+    background: rgba(8,12,28,0.9); color: #475569;
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 8px 12px;
+}
+.th-at { width: 36px; }
+.th-nom { text-align: left; padding-left: 16px !important; min-width: 110px; color: #64748b !important; }
+.th-prenom { text-align: left; padding-left: 10px !important; min-width: 100px; color: #64748b !important; }
+.th-abs { background: rgba(239,68,68,0.08) !important; color: #f87171 !important; width: 48px; }
+.th-matiere { background: rgba(99,102,241,0.06) !important; color: #818cf8 !important; width: 48px; }
+.th-alerte { background: rgba(251,191,36,0.05) !important; color: #fbbf24 !important; min-width: 120px; }
+
+/* Body row */
+.xt tbody tr { transition: background 0.2s; }
+.xt tbody tr:hover { background: rgba(99,102,241,0.04); }
+.xt tbody td { padding: 12px; }
+
+.td-num { color: #334155; font-size: 0.68rem; font-weight: 600; background: rgba(8,12,28,0.5); width: 36px; }
+.td-nom {
+    text-align: left; padding-left: 16px !important;
+    font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 0.82rem;
+    color: #f1f5f9; background: rgba(8,12,28,0.3);
+    border-right: 1px solid rgba(255,255,255,0.04);
+}
+.td-prenom {
+    text-align: left; padding-left: 10px !important;
+    color: #94a3b8; background: rgba(8,12,28,0.3);
+    border-right: 2px solid rgba(99,102,241,0.2);
+}
+.td-abs-total {
+    font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 0.95rem;
+    background: rgba(239,68,68,0.06); color: #f87171;
+}
+.abs-0    { color: #f87171; }
+.abs-low  { color: #f87171; }
+.abs-high { color: #f87171; }
+
+.td-matiere { color: #334155; font-weight: 600; background: rgba(99,102,241,0.03); font-family: 'DM Sans', sans-serif; }
+/* per-matiere colors — filled cells match header */
+.td-matiere.has-abs.m-1 { color: #818cf8; font-weight: 800; background: rgba(99,102,241,0.06); }
+.td-matiere.has-abs.m-2 { color: #34d399; font-weight: 800; background: rgba(52,211,153,0.06); }
+.td-matiere.has-abs.m-3 { color: #60a5fa; font-weight: 800; background: rgba(96,165,250,0.06); }
+.td-matiere.has-abs.m-4 { color: #f472b6; font-weight: 800; background: rgba(244,114,182,0.06); }
+.td-matiere.has-abs.m-5 { color: #fb923c; font-weight: 800; background: rgba(251,146,60,0.06); }
+/* header colors match */
+.th-matiere.m-1 { color: #818cf8 !important; }
+.th-matiere.m-2 { color: #34d399 !important; }
+.th-matiere.m-3 { color: #60a5fa !important; }
+.th-matiere.m-4 { color: #f472b6 !important; }
+.th-matiere.m-5 { color: #fb923c !important; }
+.th-matieres.m-1 { color: #818cf8 !important; }
+.th-matieres.m-2 { color: #34d399 !important; }
+.th-matieres.m-3 { color: #60a5fa !important; }
+.th-matieres.m-4 { color: #f472b6 !important; }
+.th-matieres.m-5 { color: #fb923c !important; }
+
+.td-alerte { text-align: center !important; background: rgba(251,191,36,0.03); }
+
+.alerte-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 100px; font-size: 0.72rem; font-weight: 700;
+    font-family: 'Syne', sans-serif; letter-spacing: 0.05em;
+}
+.alerte-1 { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.25); }
+.alerte-2 { background: rgba(249,115,22,0.12); color: #fb923c; border: 1px solid rgba(249,115,22,0.25); }
+.alerte-3 { background: rgba(239,68,68,0.12);  color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+
+/* ── ANIMATIONS ── */
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-24px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row mb-5">
-    <div class="col-12">
-        <div class="glass-card">
-            <h2 class="mb-0">Bienvenue, {{ student.full_name }}</h2>
-            <p class="text-secondary">Suivez votre présence et statut académique.</p>
-        </div>
-    </div>
+<!-- Ambient background -->
+<div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
 </div>
+<div class="bg-scan"></div>
 
-<div class="row g-4">
-    <!-- Overall Stats -->
-    <div class="col-md-4">
-        <div class="glass-card text-center h-100">
-            <h4 class="text-muted">Total Heures d'Absence</h4>
-            <h1
-                class="display-3 fw-bold {% if student.total_absence_hours > 10 %}text-danger{% else %}text-white{% endif %}">
-                {{ student.total_absence_hours }}h
-            </h1>
+<div class="dash-wrapper">
+
+    <!-- Hero -->
+    <div class="hero-card">
+        <div class="hero-eyebrow">Tableau de Bord Étudiant</div>
+        <div class="hero-name">{{ student.nom }} {{ student.prenom }}</div>
+        <div class="hero-sub">Suivez votre présence et statut académique</div>
+        <div class="hero-filiere">{{ filiere }}</div>
+    </div>
+
+    <!-- Alert if triggered -->
+    {% if alert %}
+    <div class="alert-banner alert-{{ alert.level }}">
+        <div class="alert-icon-wrap">{{ alert.icon }}</div>
+        <div>
+            <div class="alert-title">Niveau {{ alert.level }} — {{ alert.label }}</div>
+            <div class="alert-msg">{{ alert.message }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon si-red"><i class="fa-solid fa-ban" style="color:#f87171;font-size:1.1rem;"></i></div>
+            <div class="stat-num c-red">{{ total_absences }}<span class="unit">h</span></div>
+            <div class="stat-lbl">Total Absences</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon si-green"><i class="fa-solid fa-circle-check" style="color:#34d399;font-size:1.1rem;"></i></div>
+            <div class="stat-num c-green">{{ total_presence }}</div>
+            <div class="stat-lbl">Présences</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon si-blue"><i class="fa-solid fa-calendar-days" style="color:#60a5fa;font-size:1.1rem;"></i></div>
+            <div class="stat-num c-blue">{{ total_seances }}</div>
+            <div class="stat-lbl">Séances Total</div>
         </div>
     </div>
 
-    <!-- Course Breakdown -->
-    <div class="col-md-8">
-        <div class="glass-card h-100">
-            <h4 class="mb-3">Détail des Absences (Historique)</h4>
-            <!-- In a real app, we would loop through courses and sum specific absences -->
-
-            <table class="table table-dark table-hover bg-transparent">
-                <thead>
-                    <tr>
-                        <th scope="col">Date</th>
-                        <th scope="col">Séance</th>
-                        <th scope="col">Statut</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for record in recent_records %}
-                    <tr>
-                        <td>{{ record.session.session_date }}</td>
-                        <td>{{ record.session.course.name }}</td>
-                        <td>
-                            {% if record.status == 'present' %}
-                            <span class="badge bg-success">Présent</span>
-                            {% else %}
-                            <span class="badge bg-danger">Absent</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="3" class="text-center text-muted">Aucun enregistrement pour le moment.</td>
-                    </tr>
+    <!-- Table -->
+    <div class="table-section">
+        <div class="table-topbar">
+            <div class="table-title">
+                <span class="table-title-dot"></span>
+                Suivi des Absences — {{ filiere }}
+            </div>
+        </div>
+        <div class="table-scroll">
+        <table class="xt">
+            <thead>
+                <tr class="tr-title">
+                    <th class="th-info" colspan="3">{{ filiere }}</th>
+                    <th class="th-total-head">Abs</th>
+                    {% for mat in matieres %}<th class="th-matieres m-{{ forloop.counter }}">{{ mat.code }}</th>{% endfor %}
+                    <th class="th-alerte-head">Alerte</th>
+                </tr>
+                <tr class="tr-cols">
+                    <th class="th-at">@</th>
+                    <th class="th-nom">Nom</th>
+                    <th class="th-prenom">Prénom</th>
+                    <th class="th-abs">Abs</th>
+                    {% for mat in matieres %}<th class="th-matiere m-{{ forloop.counter }}">{{ mat.code }}</th>{% endfor %}
+                    <th class="th-alerte">Alerte</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="td-num">1</td>
+                    <td class="td-nom">{{ student.nom }}</td>
+                    <td class="td-prenom">{{ student.prenom }}</td>
+                    <td class="td-abs-total {% if total_absences == 0 %}abs-0{% elif total_absences <= 3 %}abs-low{% else %}abs-high{% endif %}">{{ total_absences }}</td>
+                    {% for mat in matieres %}
+                    <td class="td-matiere m-{{ forloop.counter }} {% if mat.absences > 0 %}has-abs{% endif %}">{% if mat.absences > 0 %}{{ mat.absences }}{% else %}—{% endif %}</td>
                     {% endfor %}
-                </tbody>
-            </table>
+                    <td class="td-alerte">
+                        {% if alert %}
+                        <span class="alerte-badge alerte-{{ alert.level }}">{{ alert.icon }} {{ alert.label }}</span>
+                        {% else %}
+                        <span style="color:#334155; font-weight:700; font-size:1rem;">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
         </div>
     </div>
+
 </div>
 {% endblock %}

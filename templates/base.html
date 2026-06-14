@@ -1,10 +1,14 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="fr">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Gestion de Présence{% endblock %}</title>
+    <title>{% block title %}FaceAtt - Gestion de Présence{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static 'logo/Logo.png.png' %}">
+    <link rel="shortcut icon" type="image/png" href="{% static 'logo/Logo.png.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'logo/Logo.png.png' %}">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
     <!-- Bootstrap 5 CSS -->
@@ -106,10 +110,15 @@
 <body>
 
     <!-- Navbar -->
+    {% block navbar %}
     <nav class="navbar navbar-expand-lg navbar-dark mb-4">
         <div class="container">
-            <a class="navbar-brand" href="#">
-                <i class="fa-solid fa-face-smile-beam me-2"></i>FaceAtt
+            <a class="navbar-brand" href="/" style="text-decoration: none;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <img src="{% static 'logo/Logo.png.png' %}" alt="FaceAtt Logo"
+                        style="width: 60px; height: 60px; object-fit: contain; border-radius: 12px;">
+                    <span style="font-weight: 700; font-size: 1.3rem; color: white;">FaceAtt</span>
+                </div>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -117,14 +126,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     {% if request.session.role %}
-                    <li class="nav-item">
-                        <span class="nav-link text-light me-3">Rôle :
-                            {% if request.session.role == 'admin' %}Admin
-                            {% elif request.session.role == 'professor' %}Professeur
-                            {% elif request.session.role == 'student' %}Étudiant
-                            {% endif %}
-                        </span>
-                    </li>
+
                     <li class="nav-item">
                         <a class="btn btn-outline-danger btn-sm mt-1" href="{% url 'logout' %}">Déconnexion</a>
                     </li>
@@ -137,6 +139,7 @@
             </div>
         </div>
     </nav>
+    {% endblock navbar %}
 
     <!-- Main Content -->
     <div class="container">

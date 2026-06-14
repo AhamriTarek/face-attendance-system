@@ -1,15 +1,18 @@
-import cv2
 import threading
-import face_recognition
-import numpy as np
 import datetime
 from django.utils import timezone
 from face_recognition_app.models import StudentFace
 from face_recognition_app.utils import deserialize_embedding
 from attendance.models import AttendanceRecord, Student
 
+# NOTE: cv2 / face_recognition / numpy are imported lazily inside the methods
+# that use them so this module imports cleanly on a webcam-less / lib-less
+# server. The webcam is only ever opened when VideoCamera() is instantiated,
+# which now only happens behind the FACE_RECOGNITION_ENABLED flag.
+
 class VideoCamera(object):
     def __init__(self):
+        import cv2
         # Using 0 for webcam. Ensure DSHOW for Windows if needed, or default
         self.video = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         if not self.video.isOpened():
@@ -69,6 +72,9 @@ class FaceRecognizerService:
         self._is_recognition_active = active
 
     def get_frame(self, session_id):
+        import cv2
+        import face_recognition
+        import numpy as np
         frame = self._camera.get_frame()
         if frame is None:
             return None

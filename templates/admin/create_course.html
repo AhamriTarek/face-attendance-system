@@ -1,38 +1,210 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="glass-card">
-            <h3 class="mb-4"><i class="fa-solid fa-book me-2"></i>Créer une Matière</h3>
-
-            <form method="POST">
-                {% csrf_token %}
-                <div class="mb-3">
-                    <label>Nom de la Matière</label>
-                    <input type="text" name="name" class="form-control" required>
-                </div>
-
-                <div class="mb-3">
-                    <label>Filière</label>
-                    <input type="text" name="filiere" class="form-control" required>
-                </div>
-
-                <div class="mb-4">
-                    <label>Attribuer au Professeur</label>
-                    <select name="professor_id" class="form-control text-dark" style="background-color: white;"
-                        required>
-                        <option value="" disabled selected>-- Sélectionner un Professeur --</option>
-                        {% for prof in professors %}
-                        <option value="{{ prof.id }}">{{ prof.full_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <button type="submit" class="btn btn-premium w-100 mb-2">Créer la Matière</button>
-                <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-light w-100">Retour</a>
-            </form>
+{% block navbar %}
+<nav id="mainNav" style="display:flex; justify-content:space-between; align-items:center; padding:0.9rem 2rem; background:rgba(15,23,42,0.95); border-bottom:1px solid rgba(255,255,255,0.08); backdrop-filter:blur(12px); transition: background 0.5s ease, border-color 0.5s ease;">
+    <div style="display:flex; align-items:center; gap:14px;">
+        <div style="width:48px; height:48px; border-radius:50%; padding:2px; background:linear-gradient(135deg,#8b5cf6,#3b82f6); box-shadow:0 0 20px rgba(139,92,246,0.7),0 0 40px rgba(139,92,246,0.3); flex-shrink:0; animation: ringPulse 2s ease-in-out infinite;">
+            <img src="{% static 'images/admin1.png' %}" alt="Admin" style="width:100%; height:100%; border-radius:50%; object-fit:contain; background:#0d0d1a; display:block;">
+        </div>
+        <div>
+            <div style="font-size:1.1rem; font-weight:800;
+                        background: linear-gradient(135deg, #fff 0%, #a78bfa 50%, #60a5fa 100%);
+                        -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+                        background-clip:text; line-height:1.2;">
+                Tableau de Bord Admin
+            </div>
+            <div id="navSubtitle" style="font-size:0.78rem; color:#64748b; font-weight:500; margin-top:1px;">
+                Info des Filières
+            </div>
         </div>
     </div>
+    <a href="{% url 'admin_dashboard' %}" id="btnRetour" style="background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2); padding:0.5rem 1.2rem; border-radius:8px; text-decoration:none; font-size:0.9rem; transition: all 0.3s ease;">
+        <i class="fas fa-arrow-left me-2"></i> Retour Dashboard
+    </a>
+</nav>
+
+<style>
+    @keyframes ringPulse {
+        0%,100% { box-shadow: 0 0 20px rgba(139,92,246,0.7), 0 0 40px rgba(139,92,246,0.3); }
+        50% { box-shadow: 0 0 30px rgba(139,92,246,1), 0 0 60px rgba(139,92,246,0.5); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Apply theme immediately before render to avoid flash ── -->
+<script>
+    (function () {
+        const savedBg = localStorage.getItem('adminThemeBg');
+        if (savedBg) {
+            document.body.style.background = savedBg;
+            document.body.style.backgroundColor = savedBg;
+            document.documentElement.style.background = savedBg;
+            document.documentElement.style.backgroundColor = savedBg;
+            const isLight = savedBg === '#ffffff' || savedBg === '#f0f0f0';
+            if (isLight) document.body.classList.add('theme-light');
+            // Also update navbar immediately
+            const nav = document.getElementById('mainNav');
+            if (nav) {
+                nav.style.background = isLight ? 'rgba(240,244,248,0.98)' : savedBg;
+                nav.style.borderBottomColor = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)';
+            }
+        }
+    })();
+</script>
+
+<style>
+    html, body { transition: background-color 0.5s ease, background 0.5s ease; }
+
+    /* ── Light theme overrides ── */
+    body.theme-light #navSubtitle { color: #475569 !important; }
+    body.theme-light #btnRetour { background: rgba(0,0,0,0.07); color: #1e293b; border-color: rgba(0,0,0,0.15); }
+    body.theme-light .filter-section { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); }
+    body.theme-light label.text-white { color: #334155 !important; }
+    body.theme-light .filiere-select { background: rgba(255,255,255,0.9); color: #0f172a; border-color: rgba(0,0,0,0.2); }
+    body.theme-light .table-container { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.1); box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    body.theme-light .excel-table th { background: rgba(100,116,139,0.15); color: #6d28d9; border-color: rgba(0,0,0,0.1); }
+    body.theme-light .excel-table td { color: #1e293b; border-color: rgba(0,0,0,0.06); }
+    body.theme-light .excel-table td[style*="color:white"] { color: #0f172a !important; }
+    body.theme-light .excel-table tr:hover { background: rgba(0,0,0,0.02); }
+    body.theme-light .list-item { border-bottom-color: rgba(0,0,0,0.06); }
+    body.theme-light .count-badge { background: rgba(59,130,246,0.15); color: #1d4ed8; }
+
+    .dashboard-header { display: none; }
+    .filter-section { background:rgba(30,41,59,0.7); padding:1rem 1.5rem; border-radius:12px; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:15px; margin-top:2rem; margin-bottom:2rem; transition: background 0.4s ease, border-color 0.4s ease; }
+    .filiere-select { background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.2); color:white; padding:0.5rem 1rem; border-radius:8px; outline:none; min-width:250px; transition: background 0.4s ease, color 0.4s ease; }
+    .filiere-select:focus { border-color:#3b82f6; }
+    .table-container { background:rgba(30,41,59,0.7); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.1); border-radius:15px; box-shadow:0 10px 30px rgba(0,0,0,0.5); overflow-x:auto; transition: background 0.4s ease, border-color 0.4s ease; }
+    .excel-table { width:100%; border-collapse:collapse; }
+    .excel-table th { background:rgba(15,23,42,0.9); color:#a78bfa; padding:1rem; text-transform:uppercase; font-size:0.85rem; letter-spacing:0.05em; border:1px solid rgba(255,255,255,0.1); font-weight:600; text-align:left; transition: background 0.4s ease, color 0.4s ease; }
+    .excel-table td { padding:1rem; border:1px solid rgba(255,255,255,0.05); color:#e2e8f0; vertical-align:top; transition: color 0.3s ease; }
+    .excel-table tr { transition: background-color 0.2s; }
+    .excel-table tr:hover { background:rgba(255,255,255,0.02); }
+    .list-item { margin-bottom:0.5rem; padding-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.05); }
+    .list-item:last-child { margin-bottom:0; padding-bottom:0; border-bottom:none; }
+    .count-badge { background:rgba(59,130,246,0.2); color:#60a5fa; padding:0.2rem 0.6rem; border-radius:20px; font-weight:bold; display:inline-block; font-size:0.9rem; }
+</style>
+
+<div class="filter-section">
+    <label class="text-white mb-0" style="font-weight:500;"><i class="fas fa-filter me-2"></i>Filtrer par Filière:</label>
+    <select id="filiereFilter" class="filiere-select">
+        <option value="all">— Toutes les filières —</option>
+        {% for fil in filieres_list %}
+        <option value="{{ fil }}">{{ fil }}</option>
+        {% endfor %}
+    </select>
 </div>
+
+<div class="table-container">
+    <table class="excel-table" id="dashboardTable">
+        <thead>
+            <tr>
+                <th>FILIÈRE</th>
+                <th>PROFESSEURS(MATIÈRE)</th>
+                <th>LES ÉTUDIANTS</th>
+                <th style="text-align:center;">TOTAL PROFS</th>
+                <th style="text-align:center;">TOTAL ÉTUDIANTS</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in dashboard_data %}
+            <tr class="filiere-row" data-filiere="{{ item.filiere }}">
+                <td style="font-weight:600; color:white;">{{ item.filiere }}</td>
+                <td>
+                    {% if item.professors %}
+                        {% for prof in item.professors %}
+                        <div class="list-item">
+                            <i class="fas fa-chalkboard-user text-info me-2"></i>
+                            {{ prof.nom }} {{ prof.prenom }} <span style="color:#94a3b8; font-size:0.85rem;">({{ prof.matiere }})</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <span class="text-secondary fst-italic">Aucun professeur</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.students %}
+                        {% for student in item.students %}
+                        <div class="list-item">
+                            <i class="fas fa-user-graduate text-success me-2"></i>
+                            {{ student.nom }} {{ student.prenom }}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <span class="text-secondary fst-italic">Aucun étudiant</span>
+                    {% endif %}
+                </td>
+                <td style="text-align:center;"><span class="count-badge">{{ item.total_professors }}</span></td>
+                <td style="text-align:center;"><span class="count-badge" style="background:rgba(16,185,129,0.2); color:#34d399;">{{ item.total_students }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-secondary py-5"><em>Aucune donnée disponible pour le moment.</em></td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    /* ── Full theme application including navbar ── */
+    function applyTheme(bgColor) {
+        // Body + html
+        document.body.style.background = bgColor;
+        document.body.style.backgroundColor = bgColor;
+        document.documentElement.style.background = bgColor;
+        document.documentElement.style.backgroundColor = bgColor;
+
+        const isLight = bgColor === '#ffffff' || bgColor === '#f0f0f0';
+        document.body.classList.toggle('theme-light', isLight);
+
+        // Navbar background matches theme
+        const nav = document.getElementById('mainNav');
+        if (nav) {
+            nav.style.background = isLight
+                ? 'rgba(240,244,248,0.98)'
+                : bgColor === '#0f0f1a' || bgColor === '#0a0a0f'
+                    ? 'rgba(10,10,20,0.97)'
+                    : bgColor;
+            nav.style.borderBottomColor = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)';
+        }
+
+        // Subtitle color
+        const sub = document.getElementById('navSubtitle');
+        if (sub) sub.style.color = isLight ? '#475569' : '#64748b';
+
+        // Retour button
+        const btn = document.getElementById('btnRetour');
+        if (btn) {
+            btn.style.background = isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.1)';
+            btn.style.color = isLight ? '#1e293b' : 'white';
+            btn.style.borderColor = isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.2)';
+        }
+    }
+
+    /* Listen for theme changes from dashboard in other tabs */
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'adminThemeBg' && e.newValue) applyTheme(e.newValue);
+    });
+
+    /* Apply on load */
+    window.addEventListener('load', function() {
+        const savedBg = localStorage.getItem('adminThemeBg');
+        if (savedBg) applyTheme(savedBg);
+    });
+
+    /* Filter logic (unchanged) */
+    document.addEventListener('DOMContentLoaded', function () {
+        const filterSelect = document.getElementById('filiereFilter');
+        const rows = document.querySelectorAll('.filiere-row');
+        filterSelect.addEventListener('change', function () {
+            const selectedFiliere = this.value;
+            rows.forEach(row => {
+                if (selectedFiliere === 'all') { row.style.display = ''; }
+                else if (row.dataset.filiere === selectedFiliere) { row.style.display = ''; }
+                else { row.style.display = 'none'; }
+            });
+        });
+    });
+</script>
 {% endblock %}

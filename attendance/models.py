@@ -8,6 +8,7 @@ class AttendanceSession(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField(null=True, blank=True)
     duration = models.FloatField(help_text="Duration in hours", default=1.5)
+    seance_number = models.IntegerField(null=True, blank=True, default=1)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -65,3 +66,21 @@ class Warning(models.Model):
 
     def __str__(self):
         return f"Warning for {self.student.full_name} in {self.course.name}"
+
+
+class AbsenceLevelRule(models.Model):
+    """Global absence alert thresholds (3 levels). Stored in absence_level_rules table."""
+    level = models.IntegerField(unique=True)           # 1, 2, 3
+    label = models.CharField(max_length=50)            # Avertissement, Sérieux, Critique
+    threshold_hours = models.FloatField()              # 8.0, 16.0, 24.0
+    message = models.TextField()
+    color = models.CharField(max_length=20, default='yellow')  # yellow / orange / red
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'absence_level_rules'
+        ordering = ['level']
+
+    def __str__(self):
+        return f"Niveau {self.level} – {self.label}"
